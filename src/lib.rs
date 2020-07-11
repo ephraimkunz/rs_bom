@@ -63,7 +63,7 @@ impl<'v> fmt::Display for VerseWithReference<'v> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
-            "{} {}: {}\n{}",
+            "{} {}:{}\n{}",
             self.book_title, self.reference.chapter_index, self.reference.verse_index, self.text
         )
     }

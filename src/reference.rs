@@ -1,4 +1,4 @@
-use crate::{BOMError, Reference};
+use crate::{BOMError, Reference, BOM};
 use std::{fmt, iter, str};
 
 /// Types of references that we'll parse:
@@ -6,15 +6,21 @@ use std::{fmt, iter, str};
 /// * Alma 3:16 - 17
 /// * Alma 3:16, 18-20 & 13:2-4
 #[derive(Debug)]
-pub struct ReferenceCollection {}
+pub struct ReferenceCollection {
+    refs: Vec<Reference>,
+}
 
 impl ReferenceCollection {
-    // From a collection type of reference
+    fn is_valid(&self, bom: &BOM) -> bool {
+        self.refs.iter().all(|r| r.is_valid(bom))
+    }
 }
 
 impl iter::FromIterator<Reference> for ReferenceCollection {
     fn from_iter<I: IntoIterator<Item = Reference>>(iter: I) -> Self {
-        unimplemented!()
+        ReferenceCollection{
+            refs: iter.into_iter().collect()
+        }
     }
 }
 
