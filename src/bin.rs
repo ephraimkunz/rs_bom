@@ -1,4 +1,4 @@
-use rs_bom::{BOM};
+use rs_bom::BOM;
 
 fn main() -> Result<(), anyhow::Error> {
     let bom = BOM::from_default_parser()?;

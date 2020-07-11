@@ -10,8 +10,12 @@ use thiserror::Error;
 enum ChunkType {
     BookTitle,
     BookDescription,
-    ChapterStart(u32),
-    Verse(u32, String),
+    ChapterStart,
+    Verse {
+        short_title: String,
+        verse: String,
+        verse_num: usize,
+    },
     Unrecognized,
 }
 
@@ -21,29 +25,28 @@ impl ChunkType {
             static ref CHAPTER_START: Regex =
                 Regex::new(r"^(\d+\s+)?[A-Za-z]+\s+\d+\nChapter\s+(?P<num>\d+)$").unwrap();
             static ref VERSE: Regex =
-                Regex::new(r"^(\d+\s+)?.+\s+\d+:\d+\n\s+(?P<num>\d+)\s+(?P<text>[\S\s]+)$")
+                Regex::new(r"^(?P<short_title>.+)\s+\d+:\d+\n\s+(?P<num>\d+)\s+(?P<text>[\S\s]+)$")
                     .unwrap();
         }
 
         match s {
             _ if s.lines().count() == 1 && s.to_uppercase() == s => ChunkType::BookTitle,
-            _ if CHAPTER_START.is_match(s) => {
-                match CHAPTER_START
-                    .captures(s)
-                    .and_then(|caps| caps["num"].parse().ok())
-                {
-                    Some(num) => ChunkType::ChapterStart(num),
-                    None => ChunkType::Unrecognized,
-                }
-            }
+            _ if CHAPTER_START.is_match(s) => ChunkType::ChapterStart,
             _ if VERSE.is_match(s) => {
                 match (
-                    VERSE.captures(s).and_then(|caps| caps["num"].parse().ok()),
+                    VERSE
+                        .captures(s)
+                        .and_then(|caps| Some(caps["short_title"].to_string())),
                     VERSE
                         .captures(s)
                         .and_then(|caps| Some(caps["text"].to_string())),
+                    VERSE.captures(s).and_then(|caps| caps["num"].parse().ok()),
                 ) {
-                    (Some(num), Some(verse)) => ChunkType::Verse(num, verse),
+                    (Some(short_title), Some(verse), Some(verse_num)) => ChunkType::Verse {
+                        short_title,
+                        verse,
+                        verse_num,
+                    },
                     _ => ChunkType::Unrecognized,
                 }
             }
@@ -95,13 +98,19 @@ impl BOMParser for GutenbergParser {
             .map(|l| l.trim_matches('\n'))
             .collect();
 
-        let mut previous_chunk = ChunkType::Verse(0, String::new()); // So we expect a title next.
+        let mut previous_chunk = ChunkType::Verse {
+            short_title: String::new(),
+            verse: String::new(),
+            verse_num: 0,
+        }; // So we expect a title next.
+
         for s in chunks {
             let chunk = ChunkType::new(s);
             match chunk {
                 ChunkType::BookTitle => match previous_chunk {
-                    ChunkType::Verse(_, _) => bom.books.push(Book {
+                    ChunkType::Verse { .. } => bom.books.push(Book {
                         title: s.to_string(),
+                        short_title: None,
                         description: None,
                         chapters: vec![],
                     }),
@@ -125,13 +134,10 @@ impl BOMParser for GutenbergParser {
                         )))
                     }
                 },
-                ChunkType::ChapterStart(num) => match previous_chunk {
-                    ChunkType::BookTitle | ChunkType::BookDescription | ChunkType::Verse(_, _) => {
+                ChunkType::ChapterStart => match previous_chunk {
+                    ChunkType::BookTitle | ChunkType::BookDescription | ChunkType::Verse { .. } => {
                         if let Some(book) = bom.books.last_mut() {
-                            book.chapters.push(Chapter {
-                                number: num,
-                                verses: vec![],
-                            });
+                            book.chapters.push(Chapter { verses: vec![] });
                         }
                     }
                     _ => {
@@ -141,39 +147,47 @@ impl BOMParser for GutenbergParser {
                         )))
                     }
                 },
-                ChunkType::Verse(num, ref text) => match previous_chunk {
-                    ChunkType::BookTitle
-                    | ChunkType::BookDescription
-                    | ChunkType::ChapterStart(_)
-                    | ChunkType::Verse(_, _) => {
-                        if previous_chunk == ChunkType::BookTitle
-                            || previous_chunk == ChunkType::BookDescription
-                        {
-                            // Books with only 1 chapter don't have a chapter start, so insert it here.
-                            if let Some(book) = bom.books.last_mut() {
-                                book.chapters.push(Chapter {
-                                    number: 1,
-                                    verses: vec![],
-                                });
+                ChunkType::Verse {
+                    ref short_title,
+                    ref verse,
+                    verse_num,
+                } => {
+                    match previous_chunk {
+                        ChunkType::BookTitle
+                        | ChunkType::BookDescription
+                        | ChunkType::ChapterStart
+                        | ChunkType::Verse { .. } => {
+                            if previous_chunk == ChunkType::BookTitle
+                                || previous_chunk == ChunkType::BookDescription
+                            {
+                                // Books with only 1 chapter don't have a chapter start, so insert it here.
+                                if let Some(book) = bom.books.last_mut() {
+                                    book.chapters.push(Chapter { verses: vec![] });
+                                }
+                            }
+
+                            if let Some(chapter) = bom.books.last_mut().and_then(|b| {
+                                b.short_title = Some(short_title.clone());
+                                b.chapters.last_mut()
+                            }) {
+                                let expected_verse_number = chapter.verses.len() + 1;
+                                if expected_verse_number != verse_num {
+                                    return Err(GutenbergParseError::CorpusInvalid(format!("Parser thought this verse was {} but text says it's verse {}: {}", expected_verse_number, verse_num, s)));
+                                }
+
+                                chapter.verses.push(Verse {
+                                    text: verse.clone(),
+                                })
                             }
                         }
-
-                        if let Some(chapter) =
-                            bom.books.last_mut().and_then(|b| b.chapters.last_mut())
-                        {
-                            chapter.verses.push(Verse {
-                                number: num,
-                                text: text.clone(),
-                            })
+                        _ => {
+                            return Err(GutenbergParseError::CorpusInvalid(format!(
+                                "Verse in incorrect location: {}",
+                                s
+                            )))
                         }
                     }
-                    _ => {
-                        return Err(GutenbergParseError::CorpusInvalid(format!(
-                            "Verse in incorrect location: {}",
-                            s
-                        )))
-                    }
-                },
+                }
                 ChunkType::Unrecognized => {
                     return Err(GutenbergParseError::CorpusInvalid(format!(
                         "Unrecognized line: {}",
