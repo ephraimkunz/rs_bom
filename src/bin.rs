@@ -1,5 +1,5 @@
-use rs_bom::BOM;
 use rand::Rng;
+use rs_bom::BOM;
 
 fn main() -> Result<(), anyhow::Error> {
     let bom = BOM::from_default_parser()?;

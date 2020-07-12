@@ -34,12 +34,14 @@ impl BOM {
         Ok(bom)
     }
 
+    // Only returns a single verse, even if the reference is for a whole chapter.
+    // In that case, the first verse is returned.
     pub fn verse(&self, reference: &Reference) -> Option<VerseWithReference> {
         match reference.is_valid(self) {
             true => {
                 let book = &self.books[reference.book_index];
-                let verse =
-                    &book.chapters[reference.chapter_index - 1].verses[reference.verse_index - 1];
+                let verse = &book.chapters[reference.chapter_index - 1].verses
+                    [reference.verse_index.unwrap_or(1) - 1];
                 let book_title = book.short_title.as_ref().unwrap_or(&book.title).clone();
                 Some(VerseWithReference {
                     book_title,
@@ -64,40 +66,44 @@ impl<'v> fmt::Display for VerseWithReference<'v> {
         write!(
             f,
             "{} {}:{}\n{}",
-            self.book_title, self.reference.chapter_index, self.reference.verse_index, self.text
+            self.book_title,
+            self.reference.chapter_index,
+            self.reference.verse_index.unwrap_or(1),
+            self.text
         )
     }
 }
 
 #[derive(Error, Debug)]
 pub enum BOMError {
-    #[error("Parsing error")]
-    ParsingError {
+    #[error("BOM text parsing error")]
+    TextParsingError {
         #[from]
         source: GutenbergParseError,
     },
 
-    #[error("Reference error")]
-    ReferenceError {},
+    #[error("Reference error: {0}")]
+    ReferenceError(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Reference {
-    book_index: usize,    // 0-based
-    chapter_index: usize, // 1-based
-    verse_index: usize,   // 1-based
+    book_index: usize,          // 0-based
+    chapter_index: usize,       // 1-based
+    verse_index: Option<usize>, // 1-based, None == whole chapter
 }
 
 impl Reference {
     fn is_valid(&self, bom: &BOM) -> bool {
-        if self.chapter_index == 0 || self.verse_index == 0 {
+        if self.chapter_index == 0 || (self.verse_index.is_some() && self.verse_index.unwrap() == 0)
+        {
             return false;
         }
 
         bom.books
             .get(self.book_index)
             .and_then(|b| b.chapters.get(self.chapter_index - 1))
-            .and_then(|c| c.verses.get(self.verse_index - 1))
+            .and_then(|c| c.verses.get(self.verse_index.unwrap_or(1) - 1))
             .is_some()
     }
 }
@@ -107,7 +113,7 @@ impl Default for Reference {
         Reference {
             book_index: 0,
             chapter_index: 1,
-            verse_index: 1,
+            verse_index: Some(1),
         }
     }
 }
@@ -147,7 +153,7 @@ mod tests {
         let reference = Reference {
             book_index: 1,
             chapter_index: 0,
-            verse_index: 0,
+            verse_index: Some(0),
         };
 
         assert_eq!(bom.verse(&reference), None);
@@ -159,7 +165,7 @@ mod tests {
         let reference = Reference {
             book_index: 0,
             chapter_index: 2,
-            verse_index: 15,
+            verse_index: Some(15),
         };
 
         assert_eq!(

@@ -29,7 +29,10 @@ impl<'v> Iterator for VerseIter<'v> {
     fn next(&mut self) -> Option<<Self as iter::Iterator>::Item> {
         let book = self.bom.books.iter().nth(self.position.book_index)?;
         let chapter = book.chapters.iter().nth(self.position.chapter_index - 1)?;
-        let verse = chapter.verses.iter().nth(self.position.verse_index - 1)?;
+        let verse = chapter
+            .verses
+            .iter()
+            .nth(self.position.verse_index.unwrap_or(1) - 1)?;
 
         let result = VerseWithReference {
             reference: self.position.clone(),
@@ -37,9 +40,9 @@ impl<'v> Iterator for VerseIter<'v> {
             text: &verse.text,
         };
 
-        self.position.verse_index += 1;
-        if self.position.verse_index > chapter.verses.len() {
-            self.position.verse_index = 1;
+        self.position.verse_index = Some(self.position.verse_index.unwrap_or(1) + 1);
+        if self.position.verse_index.unwrap_or(1) > chapter.verses.len() {
+            self.position.verse_index = Some(1);
             self.position.chapter_index += 1;
             if self.position.chapter_index > book.chapters.len() {
                 self.position.chapter_index = 1;
@@ -119,7 +122,7 @@ mod tests {
                 reference: Reference {
                     book_index: 0,
                     chapter_index: 1,
-                    verse_index: 1,
+                    verse_index: Some(1),
                 },
                 text: "hello"
             }
@@ -208,20 +211,22 @@ mod tests {
                     cmp::Ordering::Less => {
                         assert!(false, "Next chapter should be >= previous chapter")
                     }
-                    cmp::Ordering::Equal => match v.reference.verse_index.cmp(&prev_verse) {
-                        cmp::Ordering::Less | cmp::Ordering::Equal => assert!(
-                            false,
-                            "In the same chapter, next verse should be >= previous verse"
-                        ),
-                        _ => {}
-                    },
+                    cmp::Ordering::Equal => {
+                        match v.reference.verse_index.unwrap_or(1).cmp(&prev_verse) {
+                            cmp::Ordering::Less | cmp::Ordering::Equal => assert!(
+                                false,
+                                "In the same chapter, next verse should be >= previous verse"
+                            ),
+                            _ => {}
+                        }
+                    }
                     _ => {}
                 },
                 _ => {}
             }
 
             prev_chap = v.reference.chapter_index;
-            prev_verse = v.reference.verse_index;
+            prev_verse = v.reference.verse_index.unwrap_or(1);
             prev_book = v.reference.book_index;
         }
     }
