@@ -1,27 +1,153 @@
-use crate::{BOMError, Reference, BOM};
+use crate::{BOMError, VerseReference, BOM};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt, iter, str,
-};
+use std::{collections::HashMap, fmt, str};
+
+#[derive(Debug)]
+enum RangeType {
+    StartEndVerse {
+        chapter: usize,
+        start: usize,
+        end: usize,
+    },
+    StartEndChapter {
+        start: usize,
+        end: usize,
+    },
+}
+
+#[derive(Debug)]
+pub struct VerseRangeReference {
+    range_type: RangeType,
+    book_index: usize,
+}
+
+impl VerseRangeReference {
+    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> VerseRangeReferenceIter<'a, 'b> {
+        VerseRangeReferenceIter {
+            bom,
+            range_reference: self,
+            current_chap_index: 0,
+            current_verse_index: 0,
+        }
+    }
+
+    pub fn is_valid(&self, bom: &BOM) -> bool {
+        let book = bom.books.get(self.book_index);
+        match self.range_type {
+            RangeType::StartEndChapter { start, end } => {
+                if start == 0 || end == 0 {
+                    return false;
+                }
+
+                book.map(|b| b.chapters.get(start)).is_some()
+                    && book.map(|b| b.chapters.get(end)).is_some()
+            }
+            RangeType::StartEndVerse {
+                chapter,
+                start,
+                end,
+            } => {
+                if chapter == 0 || start == 0 || end == 0 {
+                    return false;
+                }
+
+                book.and_then(|b| b.chapters.get(chapter))
+                    .and_then(|c| c.verses.get(start))
+                    .is_some()
+                    && book
+                        .and_then(|b| b.chapters.get(chapter))
+                        .and_then(|c| c.verses.get(end))
+                        .is_some()
+            }
+        }
+    }
+}
+
+pub struct VerseRangeReferenceIter<'a, 'b> {
+    bom: &'a BOM,
+    range_reference: &'b VerseRangeReference,
+    current_chap_index: usize,
+    current_verse_index: usize,
+}
+
+impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
+    type Item = VerseReference;
+    fn next(&mut self) -> Option<VerseReference> {
+        if !self.range_reference.is_valid(self.bom) {
+            return None;
+        }
+
+        let book = &self.bom.books[self.range_reference.book_index];
+        match self.range_reference.range_type {
+            RangeType::StartEndChapter { start, end } => {
+                let mut res = None;
+                if self.current_chap_index + start <= end {
+                    let chapter = &book.chapters[self.current_chap_index];
+                    res = Some(VerseReference {
+                        book_index: self.range_reference.book_index,
+                        chapter_index: self.current_chap_index,
+                        verse_index: self.current_verse_index,
+                    });
+
+                    self.current_verse_index += 1;
+                    if self.current_verse_index >= chapter.verses.len() {
+                        self.current_verse_index = 0;
+                        self.current_chap_index += 1;
+                    }
+                }
+
+                res
+            }
+            RangeType::StartEndVerse {
+                chapter,
+                start,
+                end,
+            } => {
+                let mut res = None;
+                if self.current_verse_index + start <= end {
+                    res = Some(VerseReference {
+                        book_index: self.range_reference.book_index,
+                        chapter_index: chapter,
+                        verse_index: self.current_verse_index,
+                    });
+                    self.current_verse_index += 1;
+                }
+
+                res
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ReferenceCollectionIter {
+    data: Vec<VerseReference>,
+    index: usize,
+}
+
+impl Iterator for ReferenceCollectionIter {
+    type Item = VerseReference;
+    fn next(&mut self) -> Option<VerseReference> {
+        self.data.get(self.index).map(|v| v.clone())
+    }
+}
 
 #[derive(Debug)]
 pub struct ReferenceCollection {
-    refs: Vec<Reference>,
+    refs: Vec<VerseRangeReference>,
 }
 
 impl ReferenceCollection {
     fn is_valid(&self, bom: &BOM) -> bool {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
-}
 
-impl iter::FromIterator<Reference> for ReferenceCollection {
-    fn from_iter<I: IntoIterator<Item = Reference>>(iter: I) -> Self {
-        ReferenceCollection {
-            refs: iter.into_iter().collect(),
-        }
+    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> ReferenceCollectionIter {
+        // I don't think it's very efficient to eagerly collect this iter, but I don't know how to store
+        // an "in-use" iterator in struct without generators.
+        let data = self.refs.iter().flat_map(|r| r.verse_refs(bom)).collect();
+        ReferenceCollectionIter { data, index: 0 }
     }
 }
 
@@ -62,7 +188,7 @@ lazy_static! {
     .into_iter()
     .collect();
 
-    // Mapping from valid names to book index.
+    // Mapping from book index to long and short names.
     static ref CANONICAL_NAMES: Vec<(&'static str, &'static str)> = vec![
         ("1 Nephi", "1 Ne."),
         ("2 Nephi", "2 Ne."),
@@ -74,7 +200,6 @@ lazy_static! {
         ("Mosiah", "Mosiah"),
         ("Alma", "Alma"),
         ("Helaman", "Hel."),
-        ("1 Nephi", "1 Ne."),
         ("3 Nephi", "3 Ne."),
         ("4 Nephi", "4 Ne."),
         ("Mormon", "Morm."),
@@ -98,60 +223,54 @@ impl str::FromStr for ReferenceCollection {
         let citations = s.split(CITATION_DELIM);
         let mut references = vec![];
         for citation in citations {
-            let chapter_verse_split = citation.split(CHAPTER_VERSE_DELIM);
-            match chapter_verse_split.count() {
+            let chapter_verse_split: Vec<_> = citation.split(CHAPTER_VERSE_DELIM).collect();
+            match chapter_verse_split.len() {
                 1 => {
                     // Everything should be treated as a chapter.
                     let chapter_chunk_split: Vec<_> = citation.split(VERSE_CHUNK_DELIM).collect();
                     let first_chunk = chapter_chunk_split[0];
-                    let (name, book_index) = extract_book_name(first_chunk)?;
-                    let index = first_chunk.find(&name).unwrap(); // We just found it via regex.
-                    let mut chapter_chunks = vec![&first_chunk[index + name.len()..]];
+                    let (end_of_name_index, book_index) = extract_book_name(first_chunk)?;
+                    let mut chapter_chunks = vec![&first_chunk[end_of_name_index..]];
                     chapter_chunks.extend(&chapter_chunk_split[1..]);
 
-                    let mut chapter_set = HashSet::new();
                     for chapter_chunk in chapter_chunks {
-                        let split = chapter_chunk
-                            .split(|s| {
-                                return s == RANGE_DELIM_CANONICAL
-                                    || s == RANGE_DELIM_NON_CANONICAL1
-                                    || s == RANGE_DELIM_NON_CANONICAL2;
-                            })
-                            .collect::<Vec<_>>();
-                        if split.len() == 1 {
-                            let num = extract_number(split[0])?;
-                            chapter_set.insert(num);
-                        } else if split.len() != 2 {
-                            return Err(BOMError::ReferenceError(format!(
-                                "Too many dashes (-) found in {}",
-                                chapter_chunk
-                            )));
-                        } else {
-                            let lower = extract_number(split[0])?;
-                            let upper = extract_number(split[1])?;
-                            if lower >= upper {
-                                return Err(BOMError::ReferenceError(format!(
-                                    "Range is invalid: {}",
-                                    chapter_chunk
-                                )));
-                            }
-
-                            for chap in lower..=upper {
-                                chapter_set.insert(chap);
-                            }
-                        }
-                    }
-
-                    for chapter in chapter_set {
-                        references.push(Reference {
+                        let (start, end) = extract_range(chapter_chunk)?;
+                        let reference = VerseRangeReference {
                             book_index,
-                            chapter_index: chapter,
-                            verse_index: None,
-                        });
+                            range_type: RangeType::StartEndChapter { start, end },
+                        };
+                        references.push(reference);
                     }
                 }
                 2 => {
                     // First is the chapter, everything else is the verse.
+                    let book_chapter_chunk = chapter_verse_split[0];
+                    let (end_of_name_index, book_index) = extract_book_name(book_chapter_chunk)
+                        .or_else(|e| {
+                            // Use the previous book if it exists.
+                            if let Some(prev) = references.last() {
+                                Ok((0, prev.book_index))
+                            } else {
+                                Err(e)
+                            }
+                        })?;
+
+                    let chapter = extract_number(&book_chapter_chunk[end_of_name_index..])?;
+
+                    let verse_chunk_split: Vec<_> =
+                        chapter_verse_split[1].split(VERSE_CHUNK_DELIM).collect();
+                    for verse_chunk in verse_chunk_split {
+                        let (start, end) = extract_range(verse_chunk)?;
+                        let reference = VerseRangeReference {
+                            book_index,
+                            range_type: RangeType::StartEndVerse {
+                                chapter,
+                                start,
+                                end,
+                            },
+                        };
+                        references.push(reference);
+                    }
                 }
                 _ => {
                     return Err(BOMError::ReferenceError(format!(
@@ -173,23 +292,56 @@ impl str::FromStr for ReferenceCollection {
     }
 }
 
-fn extract_book_name(s: &str) -> Result<(String, usize), BOMError> {
+fn extract_range(s: &str) -> Result<(usize, usize), BOMError> {
+    let split = s
+        .split(|s| {
+            return s == RANGE_DELIM_CANONICAL
+                || s == RANGE_DELIM_NON_CANONICAL1
+                || s == RANGE_DELIM_NON_CANONICAL2;
+        })
+        .collect::<Vec<_>>();
+    match split.len() {
+        1 => {
+            let num = extract_number(split[0])?;
+            return Ok((num, num));
+        }
+        2 => {
+            let lower = extract_number(split[0])?;
+            let upper = extract_number(split[1])?;
+            if lower >= upper {
+                return Err(BOMError::ReferenceError(format!("Range is invalid: {}", s)));
+            }
+
+            return Ok((lower, upper));
+        }
+        _ => {
+            return Err(BOMError::ReferenceError(format!(
+                "Too many dashes (-) found in {}",
+                s
+            )));
+        }
+    }
+}
+
+fn extract_book_name(s: &str) -> Result<(usize, usize), BOMError> {
     lazy_static! {
         static ref POSSIBLE_BOOK_NAME: Regex =
             Regex::new(r"^(?P<name>(\d\s)?[A-Za-z ]+\.?)\s+").unwrap();
     }
 
-    let s = s.trim();
-    if POSSIBLE_BOOK_NAME.is_match(s) {
+    let s_trimmed = s.trim();
+    if POSSIBLE_BOOK_NAME.is_match(s_trimmed) {
         let caps = POSSIBLE_BOOK_NAME
-            .captures(s)
+            .captures(s_trimmed)
             .ok_or(BOMError::ReferenceError(format!(
                 "Book name not found as expected in {}",
-                s
+                s_trimmed
             )))?;
-        let cap = &caps["name"];
-        if BOOK_NAMES.contains_key(cap) {
-            return Ok((cap.to_string(), *BOOK_NAMES.get(cap).unwrap()));
+        let cap = caps["name"].trim();
+        let trimmed = cap.trim();
+        if BOOK_NAMES.contains_key(trimmed) {
+            let index = s.find(trimmed).unwrap(); // We just found it via regex.
+            return Ok((index + trimmed.len(), *BOOK_NAMES.get(trimmed).unwrap()));
         }
     }
 
@@ -207,14 +359,59 @@ fn extract_number(s: &str) -> Result<usize, BOMError> {
 
 impl fmt::Display for ReferenceCollection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        for reference in &self.refs {
-            match reference.verse_index {
-                Some(v) => {}
-                None => write!(
-                    f,
-                    "{} {}",
-                    CANONICAL_NAMES[reference.book_index].1, reference.chapter_index
-                )?,
+        if self.refs.is_empty() {
+            return Ok(());
+        }
+
+        // Use values guaranteed to not be the first.
+        let mut previous_book = 1000;
+        let mut previous_chapter = 1000;
+
+        for (i, reference) in self.refs.iter().enumerate() {
+            let new_book = previous_book != reference.book_index;
+            if new_book {
+                if i != 0 {
+                    write!(f, "{} ", CITATION_DELIM)?;
+                }
+
+                write!(f, "{} ", CANONICAL_NAMES[reference.book_index].1)?;
+                previous_book = reference.book_index;
+            }
+
+            match reference.range_type {
+                RangeType::StartEndChapter { start, end } => {
+                    if !new_book {
+                        write!(f, "{} ", VERSE_CHUNK_DELIM)?
+                    }
+
+                    if start == end {
+                        write!(f, "{}", start)?
+                    } else {
+                        write!(f, "{}{}{}", start, RANGE_DELIM_CANONICAL, end)?
+                    }
+                }
+                RangeType::StartEndVerse {
+                    chapter,
+                    start,
+                    end,
+                } => {
+                    if chapter == previous_chapter {
+                        write!(f, "{} ", VERSE_CHUNK_DELIM)?
+                    } else {
+                        if !new_book && i != 0 {
+                            write!(f, "{} ", CITATION_DELIM)?;
+                        }
+
+                        write!(f, "{}{}", chapter, CHAPTER_VERSE_DELIM)?;
+                        previous_chapter = chapter;
+                    }
+
+                    if start == end {
+                        write!(f, "{}", start)?
+                    } else {
+                        write!(f, "{}{}{}", start, RANGE_DELIM_CANONICAL, end)?
+                    }
+                }
             }
         }
 
@@ -254,45 +451,41 @@ mod tests {
         roundtrip_0: "Alma 3:16",
         roundtrip_1: "Alma 3:16–17",
         roundtrip_2: "Alma 3:16, 18",
-        roundtrip_3: "Alma 3:16,18–20; 13:2–4, 7–8",
+        roundtrip_3: "Alma 3:16, 18–20; 13:2–4, 7–8",
         roundtrip_4: "Alma 5–8",
         roundtrip_5: "Alma 8",
         roundtrip_6: "Alma 8, 10",
         roundtrip_7: "Alma 32:31; Mosiah 1:1; 3:2",
-        roundtrip_8: "1 Nephi 1:1",
         roundtrip_9: "1 Ne. 1:1",
-        roundtrip_10: "2 Nephi 1:1",
         roundtrip_11: "2 Ne. 1:1",
-        roundtrip_12: "Words of Mormon 1:1",
         roundtrip_13: "W of M 1:1",
-        roundtrip_14: "Helaman 1:1",
         roundtrip_15: "Hel. 1:1",
-        roundtrip_16: "3 Nephi 1:1",
         roundtrip_17: "3 Ne. 1:1",
-        roundtrip_18: "4 Nephi 1:1",
         roundtrip_19: "4 Ne. 1:1",
-        roundtrip_20: "Mormon 1:1",
-        roundtrip_21: "Morm. 1:1",
-        roundtrip_22: "Moroni 1:1",
-        roundtrip_23: "Moro. 1:1",
+        roundtrip_20: "Morm. 1:1",
+        roundtrip_22: "Moro. 1:1",
     }
 
     #[test]
     fn reference_collection_canonicalization() {
         // Spacing, move to abbreviations, joining ranges, ordering of books/citations?, to en-dashes
         let cases = vec![
-            ("Alma 3:16", "Alma 3:16"),
-            ("Alma 3:16;;", "Alma 3:16"), // I guess we can allow empty citations?
+            ("  Alma  3   :  16 ", "Alma 3:16"),
+            ("Moroni 1:1", "Moro. 1:1"),
+            ("Mormon 1:1", "Morm. 1:1"),
+            ("4 Nephi 1:1", "4 Ne. 1:1"),
+            ("3 Nephi 1:1", "3 Ne. 1:1"),
+            ("Helaman 1:1", "Hel. 1:1"),
+            ("Words of Mormon 1:1", "W of M 1:1"),
+            ("2 Nephi 1:1", "2 Ne. 1:1"),
+            ("1 Nephi 1:1", "1 Ne. 1:1"),
         ];
 
         for (input, expected) in cases {
             let parsed = input.parse::<ReferenceCollection>();
             if let Ok(parsed) = parsed {
                 let formatted = parsed.to_string();
-                assert_eq!(
-                    formatted, expected,
-                    "Roundtrip from string -> parsed -> string failed"
-                );
+                assert_eq!(formatted, expected, "Canonicalization failed");
             } else {
                 assert!(
                     false,
@@ -312,7 +505,7 @@ mod tests {
                 let result = case.parse::<ReferenceCollection>();
                 match result {
                     Ok(parsed) => assert!(
-                        parsed.is_valid(&bom),
+                        !parsed.is_valid(&bom),
                         format!("Should have failed to validate reference {}", case)
                     ),
                     _ => assert!(
