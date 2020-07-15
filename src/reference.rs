@@ -223,15 +223,15 @@ impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
             RangeType::StartEndChapter { start, end } => {
                 let mut res = None;
                 if self.current_chap_index + start <= end {
-                    let chapter = &book.chapters[self.current_chap_index];
+                    let chapter = &book.chapters[self.current_chap_index + start - 1];
                     res = Some(VerseReference {
                         book_index: self.range_reference.book_index,
-                        chapter_index: self.current_chap_index,
-                        verse_index: self.current_verse_index,
+                        chapter_index: self.current_chap_index + start,
+                        verse_index: self.current_verse_index + 1,
                     });
 
                     self.current_verse_index += 1;
-                    if self.current_verse_index >= chapter.verses.len() {
+                    if self.current_verse_index  > chapter.verses.len() {
                         self.current_verse_index = 0;
                         self.current_chap_index += 1;
                     }
@@ -671,6 +671,7 @@ mod tests {
                 "Alma 3:18–19, 16–17; Mosiah 3:18",
                 "Mosiah 3:18; Alma 3:16–19",
             ),
+            ("Alma 3:18–19, 16–17; Alma 3; Alma 4", "Alma 3–4"),
             ("Alma 3:16, 17, 18–19", "Alma 3:16–19"),
             ("Alma 3:16, 18, 19", "Alma 3:16, 18–19"),
             ("Alma 16, 18, 19", "Alma 16, 18–19"),

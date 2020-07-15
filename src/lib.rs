@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[test]
-    fn verses_matching_good_reference() {
+    fn verses_matching_good_reference_verse_ranges() {
         let bom = BOM::from_default_parser().unwrap();
         let reference = "1 Nephi 3: 3-5".parse::<ReferenceCollection>();
 
@@ -242,6 +242,31 @@ mod tests {
                     of them, but it is a commandment of the Lord.",
                 }
             ]
+        );
+    }
+
+    #[test]
+    fn verses_matching_good_reference_chapter_ranges() {
+        let bom = BOM::from_default_parser().unwrap();
+        let reference = "1 Nephi 3-5".parse::<ReferenceCollection>();
+
+        assert!(reference.is_ok());
+        let reference = reference.unwrap();
+        let verses: Vec<VerseWithReference> =
+            bom.verses_matching(reference.verse_refs(&bom)).collect();
+        assert_eq!(verses.len(), 91);
+        assert_eq!(
+            verses.first().unwrap(),
+            &VerseWithReference {
+                book_title: "1 Nephi".to_string(),
+                reference: VerseReference {
+                    book_index: 0,
+                    chapter_index: 3,
+                    verse_index: 1,
+                },
+                text: "And it came to pass that I, Nephi, returned fromspeaking with\n\
+                the Lord, to the tent of my father.",
+            }
         );
     }
 }
