@@ -11,8 +11,7 @@ const RANGE_DELIM_NON_CANONICAL1: char = '-'; // regular dash
 const RANGE_DELIM_NON_CANONICAL2: char = '—'; // em-dash
 
 lazy_static! {
-    // Mapping from valid names to book index.
-    static ref BOOK_NAMES: HashMap<&'static str, usize> = vec![
+    static ref BOOK_NAMES_TO_INDEX: HashMap<&'static str, usize> = vec![
         ("1 Nephi", 0),
         ("1 Ne.", 0),
         ("2 Nephi", 1),
@@ -40,8 +39,8 @@ lazy_static! {
     .into_iter()
     .collect();
 
-    // Mapping from book index to long and short names.
-    static ref CANONICAL_NAMES: Vec<(&'static str, &'static str)> = vec![
+    static ref BOOK_INDEX_TO_NAMES: Vec<(&'static str, &'static str)> = vec![
+        // (Long name, short name)
         ("1 Nephi", "1 Ne."),
         ("2 Nephi", "2 Ne."),
         ("Jacob", "Jacob"),
@@ -142,7 +141,7 @@ impl Ord for RangeType {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct VerseRangeReference {
+struct VerseRangeReference {
     range_type: RangeType,
     book_index: usize,
 }
@@ -163,7 +162,7 @@ impl Ord for VerseRangeReference {
 }
 
 impl VerseRangeReference {
-    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> VerseRangeReferenceIter<'a, 'b> {
+    fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> VerseRangeReferenceIter<'a, 'b> {
         VerseRangeReferenceIter {
             bom,
             range_reference: self,
@@ -172,7 +171,7 @@ impl VerseRangeReference {
         }
     }
 
-    pub fn is_valid(&self, bom: &BOM) -> bool {
+    fn is_valid(&self, bom: &BOM) -> bool {
         let book = bom.books.get(self.book_index);
         match self.range_type {
             RangeType::StartEndChapter { start, end } => {
@@ -204,7 +203,7 @@ impl VerseRangeReference {
     }
 }
 
-pub struct VerseRangeReferenceIter<'a, 'b> {
+struct VerseRangeReferenceIter<'a, 'b> {
     bom: &'a BOM,
     range_reference: &'b VerseRangeReference,
     current_chap_index: usize,
@@ -231,7 +230,7 @@ impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
                     });
 
                     self.current_verse_index += 1;
-                    if self.current_verse_index  > chapter.verses.len() {
+                    if self.current_verse_index > chapter.verses.len() {
                         self.current_verse_index = 0;
                         self.current_chap_index += 1;
                     }
@@ -261,7 +260,7 @@ impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
 }
 
 #[derive(Debug)]
-pub struct ReferenceCollectionIter {
+struct ReferenceCollectionIter {
     data: Vec<VerseReference>,
     index: usize,
 }
@@ -281,11 +280,15 @@ pub struct ReferenceCollection {
 }
 
 impl ReferenceCollection {
+    pub fn new(s: &str) -> Result<Self, BOMError> {
+        s.parse()
+    }
+
     fn is_valid(&self, bom: &BOM) -> bool {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
 
-    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> ReferenceCollectionIter {
+    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> impl Iterator<Item=VerseReference> {
         // I don't think it's very efficient to eagerly collect this iter, but I don't know how to store
         // an "in-use" iterator in struct without generators.
         let data = self.refs.iter().flat_map(|r| r.verse_refs(bom)).collect();
@@ -388,8 +391,6 @@ impl ReferenceCollection {
                         }
                     }
                 }
-
-                // Overlapping verse with chapter range
             }
 
             current_ref = r.clone();
@@ -534,9 +535,12 @@ fn extract_book_name(s: &str) -> Result<(usize, usize), BOMError> {
             )))?;
         let cap = caps["name"].trim();
         let trimmed = cap.trim();
-        if BOOK_NAMES.contains_key(trimmed) {
+        if BOOK_NAMES_TO_INDEX.contains_key(trimmed) {
             let index = s.find(trimmed).unwrap(); // We just found it via regex.
-            return Ok((index + trimmed.len(), *BOOK_NAMES.get(trimmed).unwrap()));
+            return Ok((
+                index + trimmed.len(),
+                *BOOK_NAMES_TO_INDEX.get(trimmed).unwrap(),
+            ));
         }
     }
 
@@ -569,7 +573,7 @@ impl fmt::Display for ReferenceCollection {
                     write!(f, "{} ", CITATION_DELIM)?;
                 }
 
-                write!(f, "{} ", CANONICAL_NAMES[reference.book_index].1)?;
+                write!(f, "{} ", BOOK_INDEX_TO_NAMES[reference.book_index].1)?;
                 previous_book = reference.book_index;
             }
 

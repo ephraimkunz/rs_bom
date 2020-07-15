@@ -6,7 +6,6 @@ mod iterators;
 mod reference;
 
 pub use self::gutenberg::{GutenbergParseError, GutenbergParser};
-pub use self::iterators::VerseIter;
 pub use self::reference::ReferenceCollection;
 
 pub trait BOMParser {
@@ -34,12 +33,12 @@ impl BOM {
         Ok(bom)
     }
 
-    pub fn verses_matching<I: IntoIterator<Item = VerseReference>>(
+    pub fn verses_matching(
         &self,
-        verse_references: I,
+        reference_collection: ReferenceCollection,
     ) -> impl Iterator<Item = VerseWithReference> {
-        verse_references
-            .into_iter()
+        reference_collection
+            .verse_refs(self)
             .filter_map(move |i| self.verse_matching(&i))
     }
 
@@ -99,6 +98,14 @@ pub struct VerseReference {
 }
 
 impl VerseReference {
+    pub fn new(book_index: usize, chapter_index: usize, verse_index: usize) -> Self {
+        VerseReference {
+            book_index,
+            chapter_index,
+            verse_index,
+        }
+    }
+
     fn is_valid(&self, bom: &BOM) -> bool {
         if self.chapter_index == 0 || self.verse_index == 0 {
             return false;
@@ -150,7 +157,6 @@ struct Verse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::iter;
 
     #[test]
     fn verse_matching_bad_reference() {
@@ -186,13 +192,8 @@ mod tests {
     #[test]
     fn verses_matching_bad_reference() {
         let bom = BOM::from_default_parser().unwrap();
-        let reference = VerseReference {
-            book_index: 0,
-            chapter_index: 0,
-            verse_index: 15,
-        };
-
-        assert_eq!(bom.verses_matching(iter::once(reference)).count(), 0);
+        let reference: ReferenceCollection = "1 Nephi 0: 1".parse().unwrap();
+        assert_eq!(bom.verses_matching(reference).count(), 0);
     }
 
     #[test]
@@ -202,8 +203,7 @@ mod tests {
 
         assert!(reference.is_ok());
         let reference = reference.unwrap();
-        let verses: Vec<VerseWithReference> =
-            bom.verses_matching(reference.verse_refs(&bom)).collect();
+        let verses: Vec<VerseWithReference> = bom.verses_matching(reference).collect();
         assert_eq!(verses.len(), 3);
         assert_eq!(
             verses,
@@ -252,8 +252,7 @@ mod tests {
 
         assert!(reference.is_ok());
         let reference = reference.unwrap();
-        let verses: Vec<VerseWithReference> =
-            bom.verses_matching(reference.verse_refs(&bom)).collect();
+        let verses: Vec<VerseWithReference> = bom.verses_matching(reference).collect();
         assert_eq!(verses.len(), 91);
         assert_eq!(
             verses.first().unwrap(),
@@ -264,7 +263,7 @@ mod tests {
                     chapter_index: 3,
                     verse_index: 1,
                 },
-                text: "And it came to pass that I, Nephi, returned fromspeaking with\n\
+                text: "And it came to pass that I, Nephi, returned from speaking with\n\
                 the Lord, to the tent of my father.",
             }
         );

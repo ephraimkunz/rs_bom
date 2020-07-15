@@ -2,7 +2,7 @@ use crate::{ReferenceCollection, VerseReference, VerseWithReference, BOM};
 use std::iter;
 
 impl BOM {
-    pub fn verses(&self) -> VerseIter {
+    pub fn verses(&self) -> impl Iterator<Item = VerseWithReference> {
         VerseIter {
             bom: self,
             position: VerseReference::default(),
@@ -11,7 +11,7 @@ impl BOM {
 }
 
 #[derive(Debug)]
-pub struct VerseIter<'v> {
+struct VerseIter<'v> {
     bom: &'v BOM,
     position: VerseReference,
 }
@@ -44,7 +44,7 @@ impl<'v> Iterator for VerseIter<'v> {
 }
 
 #[derive(Debug)]
-pub struct ReferencedVerseIter<'v> {
+struct ReferencedVerseIter<'v> {
     bom: &'v BOM,
     reference_collection: ReferenceCollection,
 }

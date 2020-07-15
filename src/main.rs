@@ -1,5 +1,6 @@
+use anyhow::anyhow;
 use rand::Rng;
-use rs_bom::{ReferenceCollection, BOM};
+use rs_bom::{ReferenceCollection, VerseReference, BOM};
 
 fn main() -> Result<(), anyhow::Error> {
     let bom = BOM::from_default_parser()?;
@@ -25,12 +26,20 @@ fn main() -> Result<(), anyhow::Error> {
     println!("{}\n", random_verse);
 
     let orig = "3 Ne. 5, 14 - 15, 13"; // "3 Nephi 5: 16 - 18, 9, 15 - 17, 14 - 15, 17 - 19";
-    let mut complicated: ReferenceCollection = orig.parse()?;
+    let mut complicated = ReferenceCollection::new(orig)?;
     complicated.canonicalize();
     println!("{} canonicalized to {}\n", orig, complicated);
-    for v in bom.verses_matching(complicated.verse_refs(&bom)) {
+
+    for v in bom.verses_matching(complicated).take(2) {
         println!("{}\n", v);
     }
+
+    let single = VerseReference::new(0, 1, 1);
+    println!(
+        "{}",
+        bom.verse_matching(&single)
+            .ok_or(anyhow!("Unable to validate verse reference"))?
+    );
 
     Ok(())
 }

@@ -10,7 +10,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "bin"
-path = "src/bin.rs"
+path = "src/main.rs"
 
 [dependencies]
 thiserror = "1.0"
