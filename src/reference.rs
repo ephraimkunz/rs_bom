@@ -249,7 +249,7 @@ impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
                     res = Some(VerseReference {
                         book_index: self.range_reference.book_index,
                         chapter_index: chapter,
-                        verse_index: self.current_verse_index,
+                        verse_index: start + self.current_verse_index,
                     });
                     self.current_verse_index += 1;
                 }
@@ -269,7 +269,9 @@ pub struct ReferenceCollectionIter {
 impl Iterator for ReferenceCollectionIter {
     type Item = VerseReference;
     fn next(&mut self) -> Option<VerseReference> {
-        self.data.get(self.index).map(|v| v.clone())
+        let data = self.data.get(self.index).map(|v| v.clone());
+        self.index += 1;
+        data
     }
 }
 

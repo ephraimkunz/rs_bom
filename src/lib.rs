@@ -195,50 +195,53 @@ mod tests {
         assert_eq!(bom.verses_matching(iter::once(reference)).count(), 0);
     }
 
-    // #[test]
-    // fn verses_matching_good_reference() {
-    //     let bom = BOM::from_default_parser().unwrap();
-    //     let reference = "1 Nephi 3: 3-5".parse::<ReferenceCollection>();
+    #[test]
+    fn verses_matching_good_reference() {
+        let bom = BOM::from_default_parser().unwrap();
+        let reference = "1 Nephi 3: 3-5".parse::<ReferenceCollection>();
 
-    //     assert!(reference.is_ok());
-    //     let reference = reference.unwrap();
-    //     let verses: Vec<VerseWithReference> =
-    //         bom.verses_matching(reference.verse_refs(&bom)).collect();
-    //     assert_eq!(verses.len(), 3);
-    //     assert_eq!(
-    //         verses,
-    //         vec![
-    //             VerseWithReference {
-    //                 book_title: "1 Nephi".to_string(),
-    //                 reference: VerseReference {
-    //                     book_index: 0,
-    //                     chapter_index: 3,
-    //                     verse_index: 3,
-    //                 },
-    //                 text: "For behold, Laban hath the record of the Jews and also a a genealogy of my forefathers, \
-    //                 and they are engraven upon plates of brass.",
-    //             },
-    //             VerseWithReference {
-    //                 book_title: "1 Nephi".to_string(),
-    //                 reference: VerseReference {
-    //                     book_index: 0,
-    //                     chapter_index: 3,
-    //                     verse_index: 4,
-    //                 },
-    //                 text: "Wherefore, the Lord hath commanded me that thou and thy brothers should go unto the house \
-    //                 of Laban, and seek the records, and bring them down hither into the wilderness.",
-    //             },
-    //             VerseWithReference {
-    //                 book_title: "1 Nephi".to_string(),
-    //                 reference: VerseReference {
-    //                     book_index: 0,
-    //                     chapter_index: 3,
-    //                     verse_index: 5,
-    //                 },
-    //                 text: "And now, behold thy brothers murmur, saying it is a hard thing which I have required of \
-    //                 them; but behold I have not required it of them, but it is a commandment of the Lord.",
-    //             }
-    //         ]
-    //     );
-    // }
+        assert!(reference.is_ok());
+        let reference = reference.unwrap();
+        let verses: Vec<VerseWithReference> =
+            bom.verses_matching(reference.verse_refs(&bom)).collect();
+        assert_eq!(verses.len(), 3);
+        assert_eq!(
+            verses,
+            vec![
+                VerseWithReference {
+                    book_title: "1 Nephi".to_string(),
+                    reference: VerseReference {
+                        book_index: 0,
+                        chapter_index: 3,
+                        verse_index: 3,
+                    },
+                    text: "For behold, Laban hath the record of the Jews and also a\n\
+                    genealogy of my forefathers, and they are engraven upon plates of\n\
+                    brass.",
+                },
+                VerseWithReference {
+                    book_title: "1 Nephi".to_string(),
+                    reference: VerseReference {
+                        book_index: 0,
+                        chapter_index: 3,
+                        verse_index: 4,
+                    },
+                    text: "Wherefore, the Lord hath commanded me that thou and thy\n\
+                    brothers should go unto the house of Laban, and seek the records,\n\
+                    and bring them down hither into the wilderness.",
+                },
+                VerseWithReference {
+                    book_title: "1 Nephi".to_string(),
+                    reference: VerseReference {
+                        book_index: 0,
+                        chapter_index: 3,
+                        verse_index: 5,
+                    },
+                    text: "And now, behold thy brothers murmur, saying it is a hard thing\n\
+                    which I have required of them; but behold I have not required it\n\
+                    of them, but it is a commandment of the Lord.",
+                }
+            ]
+        );
+    }
 }
