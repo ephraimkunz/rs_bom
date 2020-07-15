@@ -1,9 +1,66 @@
 use crate::{BOMError, VerseReference, BOM};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{collections::HashMap, fmt, str};
+use std::{cmp, collections::HashMap, fmt, str};
 
-#[derive(Debug)]
+const CITATION_DELIM: char = ';';
+const VERSE_CHUNK_DELIM: char = ',';
+const CHAPTER_VERSE_DELIM: char = ':';
+const RANGE_DELIM_CANONICAL: char = '–'; // en-dash
+const RANGE_DELIM_NON_CANONICAL1: char = '-'; // regular dash
+const RANGE_DELIM_NON_CANONICAL2: char = '—'; // em-dash
+
+lazy_static! {
+    // Mapping from valid names to book index.
+    static ref BOOK_NAMES: HashMap<&'static str, usize> = vec![
+        ("1 Nephi", 0),
+        ("1 Ne.", 0),
+        ("2 Nephi", 1),
+        ("2 Ne.", 1),
+        ("Jacob", 2),
+        ("Enos", 3),
+        ("Jarom", 4),
+        ("Omni", 5),
+        ("Words of Mormon", 6),
+        ("W of M", 6),
+        ("Mosiah", 7),
+        ("Alma", 8),
+        ("Helaman", 9),
+        ("Hel.", 9),
+        ("3 Nephi", 10),
+        ("3 Ne.", 10),
+        ("4 Nephi", 11),
+        ("4 Ne.", 11),
+        ("Mormon", 12),
+        ("Morm.", 12),
+        ("Ether", 13),
+        ("Moroni", 14),
+        ("Moro.", 14),
+    ]
+    .into_iter()
+    .collect();
+
+    // Mapping from book index to long and short names.
+    static ref CANONICAL_NAMES: Vec<(&'static str, &'static str)> = vec![
+        ("1 Nephi", "1 Ne."),
+        ("2 Nephi", "2 Ne."),
+        ("Jacob", "Jacob"),
+        ("Enos", "Enos"),
+        ("Jarom", "Jarom"),
+        ("Omni", "Omni"),
+        ("Words of Mormon", "W of M"),
+        ("Mosiah", "Mosiah"),
+        ("Alma", "Alma"),
+        ("Helaman", "Hel."),
+        ("3 Nephi", "3 Ne."),
+        ("4 Nephi", "4 Ne."),
+        ("Mormon", "Morm."),
+        ("Ether", "Ether"),
+        ("Moroni", "Moro."),
+    ];
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum RangeType {
     StartEndVerse {
         chapter: usize,
@@ -16,10 +73,93 @@ enum RangeType {
     },
 }
 
-#[derive(Debug)]
+impl RangeType {
+    fn chapter_range(&self) -> (usize, usize) {
+        match self {
+            RangeType::StartEndChapter { start, end } => (*start, *end),
+            RangeType::StartEndVerse { chapter, .. } => (*chapter, *chapter),
+        }
+    }
+
+    fn verse_range(&self) -> Option<(usize, usize)> {
+        match self {
+            RangeType::StartEndChapter { .. } => None,
+            RangeType::StartEndVerse { start, end, .. } => Some((*start, *end)),
+        }
+    }
+}
+
+impl PartialOrd for RangeType {
+    fn partial_cmp(&self, other: &RangeType) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RangeType {
+    fn cmp(&self, other: &RangeType) -> cmp::Ordering {
+        match (self, other) {
+            (
+                RangeType::StartEndVerse {
+                    chapter: c,
+                    start: s,
+                    end: e,
+                },
+                RangeType::StartEndVerse {
+                    chapter: oc,
+                    start: os,
+                    end: oe,
+                },
+            ) => match c.cmp(&oc) {
+                cmp::Ordering::Equal => match s.cmp(&os) {
+                    cmp::Ordering::Equal => e.cmp(&oe),
+                    comp @ _ => comp,
+                },
+                comp @ _ => comp,
+            },
+            (
+                RangeType::StartEndVerse { chapter: c, .. },
+                RangeType::StartEndChapter { start: os, end: oe },
+            ) => match c.cmp(&os) {
+                cmp::Ordering::Equal => c.cmp(&oe),
+                comp @ _ => comp,
+            },
+            (
+                RangeType::StartEndChapter { start: os, end: oe },
+                RangeType::StartEndVerse { chapter: c, .. },
+            ) => match os.cmp(&c) {
+                cmp::Ordering::Equal => oe.cmp(&c),
+                comp @ _ => comp,
+            },
+            (
+                RangeType::StartEndChapter { start: s, end: e },
+                RangeType::StartEndChapter { start: os, end: oe },
+            ) => match s.cmp(&os) {
+                cmp::Ordering::Equal => e.cmp(&oe),
+                comp @ _ => comp,
+            },
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VerseRangeReference {
     range_type: RangeType,
     book_index: usize,
+}
+
+impl PartialOrd for VerseRangeReference {
+    fn partial_cmp(&self, other: &VerseRangeReference) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for VerseRangeReference {
+    fn cmp(&self, other: &VerseRangeReference) -> cmp::Ordering {
+        match self.book_index.cmp(&other.book_index) {
+            cmp::Ordering::Equal => self.range_type.cmp(&other.range_type),
+            comp @ _ => comp,
+        }
+    }
 }
 
 impl VerseRangeReference {
@@ -149,63 +289,116 @@ impl ReferenceCollection {
         let data = self.refs.iter().flat_map(|r| r.verse_refs(bom)).collect();
         ReferenceCollectionIter { data, index: 0 }
     }
-}
 
-const CITATION_DELIM: char = ';';
-const VERSE_CHUNK_DELIM: char = ',';
-const CHAPTER_VERSE_DELIM: char = ':';
-const RANGE_DELIM_CANONICAL: char = '–'; // en-dash
-const RANGE_DELIM_NON_CANONICAL1: char = '-'; // regular dash
-const RANGE_DELIM_NON_CANONICAL2: char = '—'; // em-dash
+    pub fn canonicalize(&mut self) {
+        // Sort collection by book, chapter / chapter range, verse / verse range.
+        self.refs.sort();
+        let mut new_refs = vec![];
 
-lazy_static! {
-    // Mapping from valid names to book index.
-    static ref BOOK_NAMES: HashMap<&'static str, usize> = vec![
-        ("1 Nephi", 0),
-        ("1 Ne.", 0),
-        ("2 Nephi", 1),
-        ("2 Ne.", 1),
-        ("Jacob", 2),
-        ("Enos", 3),
-        ("Jarom", 4),
-        ("Omni", 5),
-        ("Words of Mormon", 6),
-        ("W of M", 6),
-        ("Mosiah", 7),
-        ("Alma", 8),
-        ("Helaman", 9),
-        ("Hel.", 9),
-        ("3 Nephi", 10),
-        ("3 Ne.", 10),
-        ("4 Nephi", 11),
-        ("4 Ne.", 11),
-        ("Mormon", 12),
-        ("Morm.", 12),
-        ("Ether", 13),
-        ("Moroni", 14),
-        ("Moro.", 14),
-    ]
-    .into_iter()
-    .collect();
+        // Collapse ranges
+        let mut current_ref = self.refs[0].clone();
+        let mut current_book = current_ref.book_index;
+        let mut current_chap_range = current_ref.range_type.chapter_range();
+        let mut current_verse_range = current_ref.range_type.verse_range();
+        new_refs.push(current_ref);
 
-    // Mapping from book index to long and short names.
-    static ref CANONICAL_NAMES: Vec<(&'static str, &'static str)> = vec![
-        ("1 Nephi", "1 Ne."),
-        ("2 Nephi", "2 Ne."),
-        ("Jacob", "Jacob"),
-        ("Enos", "Enos"),
-        ("Jarom", "Jarom"),
-        ("Omni", "Omni"),
-        ("Words of Mormon", "W of M"),
-        ("Mosiah", "Mosiah"),
-        ("Alma", "Alma"),
-        ("Helaman", "Hel."),
-        ("3 Nephi", "3 Ne."),
-        ("4 Nephi", "4 Ne."),
-        ("Mormon", "Morm."),
-        ("Ether", "Ether"),
-        ("Moroni", "Moro."),
-    ];
+        for r in self.refs.iter().skip(1) {
+            let chap_range = r.range_type.chapter_range();
+            let verse_range = r.range_type.verse_range();
+
+            // In same book.
+            if r.book_index == current_book {
+                // Overlapping chapter ranges
+                if chap_range.0 >= current_chap_range.0
+                    && chap_range.0 <= (current_chap_range.1 + 1)
+                {
+                    match (verse_range, current_verse_range) {
+                        (None, None) => {
+                            if verse_range.is_none() && current_verse_range.is_none() {
+                                // Both chapter-only ranges. Take the union of their covered area.
+                                let min_chap = current_chap_range.0.min(chap_range.0);
+                                let max_chap = current_chap_range.1.max(chap_range.1);
+                                let combined_ref = VerseRangeReference {
+                                    book_index: current_book,
+                                    range_type: RangeType::StartEndChapter {
+                                        start: min_chap,
+                                        end: max_chap,
+                                    },
+                                };
+
+                                current_ref = combined_ref.clone();
+                                current_book = current_ref.book_index;
+                                current_chap_range = current_ref.range_type.chapter_range();
+                                current_verse_range = current_ref.range_type.verse_range();
+
+                                new_refs.pop();
+                                new_refs.push(combined_ref);
+                                continue;
+                            }
+                        }
+
+                        (Some(vr), Some(cvr)) => {
+                            // Overlapping verse ranges
+                            if vr.0 >= cvr.0 && vr.0 <= (cvr.1 + 1) {
+                                let min_verse = cvr.0.min(vr.0);
+                                let max_verse = cvr.1.max(vr.1);
+                                let combined_ref = VerseRangeReference {
+                                    book_index: current_book,
+                                    range_type: RangeType::StartEndVerse {
+                                        start: min_verse,
+                                        end: max_verse,
+                                        chapter: current_chap_range.0, // We can use any of the chapter ranges, arbitrary choice since all the same.
+                                    },
+                                };
+
+                                current_ref = combined_ref.clone();
+                                current_book = current_ref.book_index;
+                                current_chap_range = current_ref.range_type.chapter_range();
+                                current_verse_range = current_ref.range_type.verse_range();
+
+                                new_refs.pop();
+                                new_refs.push(combined_ref);
+                                continue;
+                            }
+                        }
+                        _ => {
+                            // We know that they have overlapping chapter ranges, and that one is a full chapter (None).
+                            // the right way to handle this is to keep the full chapter and eliminate single verses in it.
+                            if verse_range.is_none() {
+                                // Keep the new range.
+                                let combined_ref = VerseRangeReference {
+                                    book_index: current_book,
+                                    range_type: RangeType::StartEndChapter {
+                                        start: chap_range.0,
+                                        end: chap_range.1,
+                                    },
+                                };
+
+                                current_ref = combined_ref.clone();
+                                current_book = current_ref.book_index;
+                                current_chap_range = current_ref.range_type.chapter_range();
+                                current_verse_range = current_ref.range_type.verse_range();
+
+                                new_refs.pop();
+                                new_refs.push(combined_ref);
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                // Overlapping verse with chapter range
+            }
+
+            current_ref = r.clone();
+            current_book = current_ref.book_index;
+            current_chap_range = current_ref.range_type.chapter_range();
+            current_verse_range = current_ref.range_type.verse_range();
+            new_refs.push(r.clone()); // Nothing to combine.
+        }
+
+        self.refs = new_refs;
+    }
 }
 
 /// Types of references that we'll parse:
@@ -395,7 +588,7 @@ impl fmt::Display for ReferenceCollection {
                     start,
                     end,
                 } => {
-                    if chapter == previous_chapter {
+                    if !new_book && chapter == previous_chapter {
                         write!(f, "{} ", VERSE_CHUNK_DELIM)?
                     } else {
                         if !new_book && i != 0 {
@@ -468,9 +661,22 @@ mod tests {
 
     #[test]
     fn reference_collection_canonicalization() {
-        // Spacing, move to abbreviations, joining ranges, ordering of books/citations?, to en-dashes
         let cases = vec![
+            // Spacing
             ("  Alma  3   :  16 ", "Alma 3:16"),
+            // Joining ranges, ordering of books and chapters
+            (
+                "Alma 3:18–19, 16–17; Mosiah 3:18",
+                "Mosiah 3:18; Alma 3:16–19",
+            ),
+            ("Alma 3:16, 17, 18–19", "Alma 3:16–19"),
+            ("Alma 3:16, 18, 19", "Alma 3:16, 18–19"),
+            ("Alma 16, 18, 19", "Alma 16, 18–19"),
+            // Convert to en-dashes
+            ("Alma 3:16-17", "Alma 3:16–17"),
+            ("Alma 3:16—17", "Alma 3:16–17"),
+            // Move to abbreviations
+            ("Moroni 1:1", "Moro. 1:1"),
             ("Moroni 1:1", "Moro. 1:1"),
             ("Mormon 1:1", "Morm. 1:1"),
             ("4 Nephi 1:1", "4 Ne. 1:1"),
@@ -483,7 +689,8 @@ mod tests {
 
         for (input, expected) in cases {
             let parsed = input.parse::<ReferenceCollection>();
-            if let Ok(parsed) = parsed {
+            if let Ok(mut parsed) = parsed {
+                parsed.canonicalize();
                 let formatted = parsed.to_string();
                 assert_eq!(formatted, expected, "Canonicalization failed");
             } else {
