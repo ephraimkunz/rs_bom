@@ -1,4 +1,4 @@
-use crate::{ReferenceCollection, VerseReference, VerseWithReference, BOM};
+use crate::{VerseReference, VerseWithReference, BOM};
 use std::iter;
 
 impl BOM {

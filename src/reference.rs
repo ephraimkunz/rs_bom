@@ -284,6 +284,7 @@ impl ReferenceCollection {
         s.parse()
     }
 
+    #[allow(dead_code)] // Used by test
     fn is_valid(&self, bom: &BOM) -> bool {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
