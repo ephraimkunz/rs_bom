@@ -75,65 +75,65 @@ enum RangeType {
 impl RangeType {
     fn chapter_range(&self) -> (usize, usize) {
         match self {
-            RangeType::StartEndChapter { start, end } => (*start, *end),
-            RangeType::StartEndVerse { chapter, .. } => (*chapter, *chapter),
+            Self::StartEndChapter { start, end } => (*start, *end),
+            Self::StartEndVerse { chapter, .. } => (*chapter, *chapter),
         }
     }
 
     fn verse_range(&self) -> Option<(usize, usize)> {
         match self {
-            RangeType::StartEndChapter { .. } => None,
-            RangeType::StartEndVerse { start, end, .. } => Some((*start, *end)),
+            Self::StartEndChapter { .. } => None,
+            Self::StartEndVerse { start, end, .. } => Some((*start, *end)),
         }
     }
 }
 
 impl PartialOrd for RangeType {
-    fn partial_cmp(&self, other: &RangeType) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for RangeType {
-    fn cmp(&self, other: &RangeType) -> cmp::Ordering {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
         match (self, other) {
             (
-                RangeType::StartEndVerse {
+                Self::StartEndVerse {
                     chapter: c,
                     start: s,
                     end: e,
                 },
-                RangeType::StartEndVerse {
+                Self::StartEndVerse {
                     chapter: oc,
                     start: os,
                     end: oe,
                 },
-            ) => match c.cmp(&oc) {
-                cmp::Ordering::Equal => match s.cmp(&os) {
-                    cmp::Ordering::Equal => e.cmp(&oe),
+            ) => match c.cmp(oc) {
+                cmp::Ordering::Equal => match s.cmp(os) {
+                    cmp::Ordering::Equal => e.cmp(oe),
                     comp => comp,
                 },
                 comp => comp,
             },
             (
-                RangeType::StartEndVerse { chapter: c, .. },
-                RangeType::StartEndChapter { start: os, end: oe },
-            ) => match c.cmp(&os) {
-                cmp::Ordering::Equal => c.cmp(&oe),
+                Self::StartEndVerse { chapter: c, .. },
+                Self::StartEndChapter { start: os, end: oe },
+            ) => match c.cmp(os) {
+                cmp::Ordering::Equal => c.cmp(oe),
                 comp => comp,
             },
             (
-                RangeType::StartEndChapter { start: os, end: oe },
-                RangeType::StartEndVerse { chapter: c, .. },
-            ) => match os.cmp(&c) {
-                cmp::Ordering::Equal => oe.cmp(&c),
+                Self::StartEndChapter { start: os, end: oe },
+                Self::StartEndVerse { chapter: c, .. },
+            ) => match os.cmp(c) {
+                cmp::Ordering::Equal => oe.cmp(c),
                 comp => comp,
             },
             (
-                RangeType::StartEndChapter { start: s, end: e },
-                RangeType::StartEndChapter { start: os, end: oe },
-            ) => match s.cmp(&os) {
-                cmp::Ordering::Equal => e.cmp(&oe),
+                Self::StartEndChapter { start: s, end: e },
+                Self::StartEndChapter { start: os, end: oe },
+            ) => match s.cmp(os) {
+                cmp::Ordering::Equal => e.cmp(oe),
                 comp => comp,
             },
         }
@@ -147,13 +147,13 @@ struct VerseRangeReference {
 }
 
 impl PartialOrd for VerseRangeReference {
-    fn partial_cmp(&self, other: &VerseRangeReference) -> Option<cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for VerseRangeReference {
-    fn cmp(&self, other: &VerseRangeReference) -> cmp::Ordering {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
         match self.book_index.cmp(&other.book_index) {
             cmp::Ordering::Equal => self.range_type.cmp(&other.range_type),
             comp => comp,
@@ -260,12 +260,12 @@ impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
 }
 
 #[derive(Debug)]
-struct ReferenceCollectionIter {
+struct RangeCollectionIter {
     data: Vec<VerseReference>,
     index: usize,
 }
 
-impl Iterator for ReferenceCollectionIter {
+impl Iterator for RangeCollectionIter {
     type Item = VerseReference;
     fn next(&mut self) -> Option<VerseReference> {
         let data = self.data.get(self.index).cloned();
@@ -275,11 +275,11 @@ impl Iterator for ReferenceCollectionIter {
 }
 
 #[derive(Debug)]
-pub struct ReferenceCollection {
+pub struct RangeCollection {
     refs: Vec<VerseRangeReference>,
 }
 
-impl ReferenceCollection {
+impl RangeCollection {
     pub fn new(s: &str) -> Result<Self, BOMError> {
         s.parse()
     }
@@ -293,7 +293,7 @@ impl ReferenceCollection {
         // I don't think it's very efficient to eagerly collect this iter, but I don't know how to store
         // an "in-use" iterator in struct without generators.
         let data = self.refs.iter().flat_map(|r| r.verse_refs(bom)).collect();
-        ReferenceCollectionIter { data, index: 0 }
+        RangeCollectionIter { data, index: 0 }
     }
 
     pub fn canonicalize(&mut self) {
@@ -414,7 +414,7 @@ impl ReferenceCollection {
 // everything in the citation is a chapter, not a verse.
 // 3. In a single citation, chunks of verses are comma-separated on the right side of a semicolon.
 // A en-dash is used to mark ranges.
-impl str::FromStr for ReferenceCollection {
+impl str::FromStr for RangeCollection {
     type Err = BOMError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let citations = s.split(CITATION_DELIM);
@@ -485,7 +485,7 @@ impl str::FromStr for ReferenceCollection {
             )));
         }
 
-        Ok(ReferenceCollection { refs: references })
+        Ok(Self { refs: references })
     }
 }
 
@@ -552,7 +552,7 @@ fn extract_number(s: &str) -> Result<usize, BOMError> {
         .map_err(|_| BOMError::ReferenceError(format!("Unable to parse number from {}", s)))
 }
 
-impl fmt::Display for ReferenceCollection {
+impl fmt::Display for RangeCollection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         if self.refs.is_empty() {
             return Ok(());
@@ -624,7 +624,7 @@ mod tests {
             #[test]
             fn $name() {
                 let input = $value;
-                let parsed = input.parse::<ReferenceCollection>();
+                let parsed = input.parse::<RangeCollection>();
                 if let Ok(parsed) = parsed {
                     let formatted = parsed.to_string();
                     assert_eq!(
@@ -691,7 +691,7 @@ mod tests {
         ];
 
         for (input, expected) in cases {
-            let parsed = input.parse::<ReferenceCollection>();
+            let parsed = input.parse::<RangeCollection>();
             if let Ok(mut parsed) = parsed {
                 parsed.canonicalize();
                 let formatted = parsed.to_string();
@@ -712,7 +712,7 @@ mod tests {
             fn $name() {
                 let case = $value;
                 let bom = BOM::from_default_parser().unwrap();
-                let result = case.parse::<ReferenceCollection>();
+                let result = case.parse::<RangeCollection>();
                 match result {
                     Ok(parsed) => assert!(
                         !parsed.is_valid(&bom),

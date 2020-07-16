@@ -1,12 +1,12 @@
 use std::{fmt, path};
 use thiserror::Error;
 
-mod gutenberg;
 mod iterators;
+mod parsers;
 mod reference;
 
-pub use self::gutenberg::{GutenbergParseError, GutenbergParser};
-pub use self::reference::ReferenceCollection;
+pub use self::parsers::gutenberg;
+pub use self::reference::RangeCollection;
 
 pub trait BOMParser {
     type Err: std::error::Error;
@@ -28,34 +28,33 @@ pub struct BOM {
 impl BOM {
     pub fn from_default_parser() -> Result<Self, BOMError> {
         let corpus_path = path::Path::new("data/gutenberg.txt");
-        let parser = GutenbergParser::new(corpus_path);
+        let parser = gutenberg::Parser::new(corpus_path);
         let bom = parser.parse()?;
         Ok(bom)
     }
 
     pub fn verses_matching(
         &self,
-        reference_collection: ReferenceCollection,
+        range_collection: &RangeCollection,
     ) -> impl Iterator<Item = VerseWithReference> {
-        reference_collection
+        range_collection
             .verse_refs(self)
             .filter_map(move |i| self.verse_matching(&i))
     }
 
     pub fn verse_matching(&self, r: &VerseReference) -> Option<VerseWithReference> {
-        match r.is_valid(self) {
-            true => {
-                let book = &self.books[r.book_index];
-                let verse = &book.chapters[r.chapter_index - 1].verses[r.verse_index - 1];
-                let book_title = book.short_title.as_ref().unwrap_or(&book.title).clone();
+        if r.is_valid(self) {
+            let book = &self.books[r.book_index];
+            let verse = &book.chapters[r.chapter_index - 1].verses[r.verse_index - 1];
+            let book_title = book.short_title.as_ref().unwrap_or(&book.title).clone();
 
-                Some(VerseWithReference {
-                    book_title,
-                    reference: r.clone(),
-                    text: &verse.text,
-                })
-            }
-            false => None,
+            Some(VerseWithReference {
+                book_title,
+                reference: r.clone(),
+                text: &verse.text,
+            })
+        } else {
+            None
         }
     }
 }
@@ -82,7 +81,7 @@ pub enum BOMError {
     #[error("BOM text parsing error")]
     TextParsingError {
         #[from]
-        source: GutenbergParseError,
+        source: gutenberg::ParseError,
     },
 
     #[error("Reference error: {0}")]
@@ -99,7 +98,7 @@ pub struct VerseReference {
 
 impl VerseReference {
     pub fn new(book_index: usize, chapter_index: usize, verse_index: usize) -> Self {
-        VerseReference {
+        Self {
             book_index,
             chapter_index,
             verse_index,
@@ -121,7 +120,7 @@ impl VerseReference {
 
 impl Default for VerseReference {
     fn default() -> Self {
-        VerseReference {
+        Self {
             book_index: 0,
             chapter_index: 1,
             verse_index: 1,
@@ -192,18 +191,18 @@ mod tests {
     #[test]
     fn verses_matching_bad_reference() {
         let bom = BOM::from_default_parser().unwrap();
-        let reference: ReferenceCollection = "1 Nephi 0: 1".parse().unwrap();
-        assert_eq!(bom.verses_matching(reference).count(), 0);
+        let reference: RangeCollection = "1 Nephi 0: 1".parse().unwrap();
+        assert_eq!(bom.verses_matching(&reference).count(), 0);
     }
 
     #[test]
     fn verses_matching_good_reference_verse_ranges() {
         let bom = BOM::from_default_parser().unwrap();
-        let reference = "1 Nephi 3: 3-5".parse::<ReferenceCollection>();
+        let reference = "1 Nephi 3: 3-5".parse::<RangeCollection>();
 
         assert!(reference.is_ok());
         let reference = reference.unwrap();
-        let verses: Vec<VerseWithReference> = bom.verses_matching(reference).collect();
+        let verses: Vec<VerseWithReference> = bom.verses_matching(&reference).collect();
         assert_eq!(verses.len(), 3);
         assert_eq!(
             verses,
@@ -248,11 +247,11 @@ mod tests {
     #[test]
     fn verses_matching_good_reference_chapter_ranges() {
         let bom = BOM::from_default_parser().unwrap();
-        let reference = "1 Nephi 3-5".parse::<ReferenceCollection>();
+        let reference = "1 Nephi 3-5".parse::<RangeCollection>();
 
         assert!(reference.is_ok());
         let reference = reference.unwrap();
-        let verses: Vec<VerseWithReference> = bom.verses_matching(reference).collect();
+        let verses: Vec<VerseWithReference> = bom.verses_matching(&reference).collect();
         assert_eq!(verses.len(), 91);
         assert_eq!(
             verses.first().unwrap(),

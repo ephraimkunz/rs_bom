@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use rand::Rng;
-use rs_bom::{ReferenceCollection, VerseReference, BOM};
+use rs_bom::{RangeCollection, VerseReference, BOM};
 
 fn main() -> Result<(), anyhow::Error> {
     let bom = BOM::from_default_parser()?;
@@ -26,7 +26,7 @@ fn main() -> Result<(), anyhow::Error> {
     println!("{}\n", random_verse);
 
     let orig = "3 Ne. 5, 14 - 15, 13"; // "3 Nephi 5: 16 - 18, 9, 15 - 17, 14 - 15, 17 - 19";
-    let mut complicated = ReferenceCollection::new(orig)?;
+    let mut complicated = RangeCollection::new(orig)?;
     complicated.canonicalize();
     println!("{} canonicalized to {}\n", orig, complicated);
 
