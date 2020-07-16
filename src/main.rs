@@ -30,7 +30,7 @@ fn main() -> Result<(), anyhow::Error> {
     complicated.canonicalize();
     println!("{} canonicalized to {}\n", orig, complicated);
 
-    for v in bom.verses_matching(complicated).take(2) {
+    for v in bom.verses_matching(&complicated).take(2) {
         println!("{}\n", v);
     }
 
