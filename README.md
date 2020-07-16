@@ -8,6 +8,7 @@
 3. Run `cargo doc --open` to generate the docs.
 4. Run `cargo test` to run tests.
 5. Run `cargo fuzz run reference` to run the reference parser fuzzer.
+6. Run `cargo bench` to benchmark.
 
 ## Features
 * Iter over all the verses in the Book of Mormon. 
