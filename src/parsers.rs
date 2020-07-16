@@ -58,6 +58,7 @@ pub mod gutenberg {
     }
 
     impl Parser {
+        #[must_use]
         pub fn new(path: &path::Path) -> Self {
             Self { path: path.into() }
         }
@@ -108,100 +109,7 @@ pub mod gutenberg {
             }; // So we expect a title next.
 
             for s in chunks {
-                let chunk = ChunkType::new(s);
-                match chunk {
-                    ChunkType::BookTitle => match previous_chunk {
-                        ChunkType::Verse { .. } => bom.books.push(Book {
-                            title: s.to_string(),
-                            short_title: None,
-                            description: None,
-                            chapters: vec![],
-                        }),
-                        _ => {
-                            return Err(ParseError::CorpusInvalid(format!(
-                                "Book title in incorrect location: {}",
-                                s
-                            )))
-                        }
-                    },
-                    ChunkType::BookDescription => match previous_chunk {
-                        ChunkType::BookTitle => {
-                            if let Some(book) = bom.books.last_mut() {
-                                book.description = Some(s.to_string());
-                            }
-                        }
-                        _ => {
-                            return Err(ParseError::CorpusInvalid(format!(
-                                "Book description in incorrect location: {}",
-                                s
-                            )))
-                        }
-                    },
-                    ChunkType::ChapterStart => match previous_chunk {
-                        ChunkType::BookTitle
-                        | ChunkType::BookDescription
-                        | ChunkType::Verse { .. } => {
-                            if let Some(book) = bom.books.last_mut() {
-                                book.chapters.push(Chapter { verses: vec![] });
-                            }
-                        }
-                        _ => {
-                            return Err(ParseError::CorpusInvalid(format!(
-                                "Chapter start in incorrect location: {}",
-                                s
-                            )))
-                        }
-                    },
-                    ChunkType::Verse {
-                        ref short_title,
-                        ref verse,
-                        verse_num,
-                    } => {
-                        match previous_chunk {
-                            ChunkType::BookTitle
-                            | ChunkType::BookDescription
-                            | ChunkType::ChapterStart
-                            | ChunkType::Verse { .. } => {
-                                if previous_chunk == ChunkType::BookTitle
-                                    || previous_chunk == ChunkType::BookDescription
-                                {
-                                    // Books with only 1 chapter don't have a chapter start, so insert it here.
-                                    if let Some(book) = bom.books.last_mut() {
-                                        book.chapters.push(Chapter { verses: vec![] });
-                                    }
-                                }
-
-                                if let Some(chapter) = bom.books.last_mut().and_then(|b| {
-                                    b.short_title = Some(short_title.clone());
-                                    b.chapters.last_mut()
-                                }) {
-                                    let expected_verse_number = chapter.verses.len() + 1;
-                                    if expected_verse_number != verse_num {
-                                        return Err(ParseError::CorpusInvalid(format!("Parser thought this verse was {} but text says it's verse {}: {}", expected_verse_number, verse_num, s)));
-                                    }
-
-                                    chapter.verses.push(Verse {
-                                        text: verse.clone(),
-                                    })
-                                }
-                            }
-                            _ => {
-                                return Err(ParseError::CorpusInvalid(format!(
-                                    "Verse in incorrect location: {}",
-                                    s
-                                )))
-                            }
-                        }
-                    }
-                    ChunkType::Unrecognized => {
-                        return Err(ParseError::CorpusInvalid(format!(
-                            "Unrecognized line: {}",
-                            s
-                        )))
-                    }
-                }
-
-                previous_chunk = chunk;
+                previous_chunk = update_book_with_chunk(s, &previous_chunk, &mut bom)?;
             }
 
             if bom.books.is_empty() {
@@ -210,6 +118,103 @@ pub mod gutenberg {
 
             Ok(bom)
         }
+    }
+
+    fn update_book_with_chunk(s: &str, previous_chunk: &ChunkType, bom: &mut BOM) -> Result<ChunkType, ParseError> {
+        let chunk = ChunkType::new(s);
+        match chunk {
+            ChunkType::BookTitle => match previous_chunk {
+                ChunkType::Verse { .. } => bom.books.push(Book {
+                    title: s.to_string(),
+                    short_title: None,
+                    description: None,
+                    chapters: vec![],
+                }),
+                _ => {
+                    return Err(ParseError::CorpusInvalid(format!(
+                        "Book title in incorrect location: {}",
+                        s
+                    )))
+                }
+            },
+            ChunkType::BookDescription => match previous_chunk {
+                ChunkType::BookTitle => {
+                    if let Some(book) = bom.books.last_mut() {
+                        book.description = Some(s.to_string());
+                    }
+                }
+                _ => {
+                    return Err(ParseError::CorpusInvalid(format!(
+                        "Book description in incorrect location: {}",
+                        s
+                    )))
+                }
+            },
+            ChunkType::ChapterStart => match previous_chunk {
+                ChunkType::BookTitle
+                | ChunkType::BookDescription
+                | ChunkType::Verse { .. } => {
+                    if let Some(book) = bom.books.last_mut() {
+                        book.chapters.push(Chapter { verses: vec![] });
+                    }
+                }
+                _ => {
+                    return Err(ParseError::CorpusInvalid(format!(
+                        "Chapter start in incorrect location: {}",
+                        s
+                    )))
+                }
+            },
+            ChunkType::Verse {
+                ref short_title,
+                ref verse,
+                verse_num,
+            } => {
+                match previous_chunk {
+                    ChunkType::BookTitle
+                    | ChunkType::BookDescription
+                    | ChunkType::ChapterStart
+                    | ChunkType::Verse { .. } => {
+                        if previous_chunk == &ChunkType::BookTitle
+                            || previous_chunk == &ChunkType::BookDescription
+                        {
+                            // Books with only 1 chapter don't have a chapter start, so insert it here.
+                            if let Some(book) = bom.books.last_mut() {
+                                book.chapters.push(Chapter { verses: vec![] });
+                            }
+                        }
+
+                        if let Some(chapter) = bom.books.last_mut().and_then(|b| {
+                            b.short_title = Some(short_title.clone());
+                            b.chapters.last_mut()
+                        }) {
+                            let expected_verse_number = chapter.verses.len() + 1;
+                            if expected_verse_number != verse_num {
+                                return Err(ParseError::CorpusInvalid(format!("Parser thought this verse was {} but text says it's verse {}: {}", expected_verse_number, verse_num, s)));
+                            }
+
+                            chapter.verses.push(Verse {
+                                text: verse.clone(),
+                            })
+                        }
+                    }
+                    _ => {
+                        return Err(ParseError::CorpusInvalid(format!(
+                            "Verse in incorrect location: {}",
+                            s
+                        )))
+                    }
+                }
+            }
+            ChunkType::Unrecognized => {
+                return Err(ParseError::CorpusInvalid(format!(
+                    "Unrecognized line: {}",
+                    s
+                )))
+            }
+        }
+
+        Ok(chunk)
     }
 
     #[derive(Error, Debug)]

@@ -17,7 +17,7 @@ fn main() -> Result<(), anyhow::Error> {
         ephraim,
         num_ephraim,
         total,
-        ((num_ephraim as f64) / (total as f64)) * 100f64
+        ((num_ephraim as f64) / (total as f64)) * 100_f64
     );
 
     let mut rng = rand::thread_rng();

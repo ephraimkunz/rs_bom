@@ -162,7 +162,7 @@ impl Ord for VerseRangeReference {
 }
 
 impl VerseRangeReference {
-    fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> VerseRangeReferenceIter<'a, 'b> {
+    const fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> VerseRangeReferenceIter<'a, 'b> {
         VerseRangeReferenceIter {
             bom,
             range_reference: self,
@@ -280,12 +280,18 @@ pub struct RangeCollection {
 }
 
 impl RangeCollection {
+    /// Parses a given string `s` into an iterable collection.
+    /// # Errors
+    ///
+    /// Will return `Err` if `s` does not match a valid reference format.
+    /// Note that just because a reference parses does not make it valid. 
+    /// Validity of a reference in a given book can be checked with `is_valid`.
     pub fn new(s: &str) -> Result<Self, BOMError> {
         s.parse()
     }
 
-    #[allow(dead_code)] // Used by test
-    fn is_valid(&self, bom: &BOM) -> bool {
+    #[must_use]
+    pub fn is_valid(&self, bom: &BOM) -> bool {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
 

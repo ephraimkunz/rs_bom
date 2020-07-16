@@ -10,6 +10,10 @@ pub use self::reference::RangeCollection;
 
 pub trait BOMParser {
     type Err: std::error::Error;
+    /// Parse using the parser-specific implementation.
+    /// # Errors
+    /// 
+    /// Customize type of errors returned with `Err` associated type.
     fn parse(self) -> Result<BOM, Self::Err>;
 }
 
@@ -26,6 +30,12 @@ pub struct BOM {
 }
 
 impl BOM {
+    /// Creates a `BOM` by using the default parser.
+    /// # Errors
+    ///
+    /// Will return `Err` if there is an error parsing the backing corpus.
+    // This could happen if the corpus is corrupt, non-existant, or doesn't
+    // match the expected format.
     pub fn from_default_parser() -> Result<Self, BOMError> {
         let corpus_path = path::Path::new("data/gutenberg.txt");
         let parser = gutenberg::Parser::new(corpus_path);
@@ -42,6 +52,7 @@ impl BOM {
             .filter_map(move |i| self.verse_matching(&i))
     }
 
+    #[must_use]
     pub fn verse_matching(&self, r: &VerseReference) -> Option<VerseWithReference> {
         if r.is_valid(self) {
             let book = &self.books[r.book_index];
@@ -97,7 +108,8 @@ pub struct VerseReference {
 }
 
 impl VerseReference {
-    pub fn new(book_index: usize, chapter_index: usize, verse_index: usize) -> Self {
+    #[must_use]
+    pub const fn new(book_index: usize, chapter_index: usize, verse_index: usize) -> Self {
         Self {
             book_index,
             chapter_index,
