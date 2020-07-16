@@ -288,7 +288,7 @@ impl ReferenceCollection {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
 
-    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> impl Iterator<Item = VerseReference> {
+    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> impl Iterator<Item=VerseReference> {
         // I don't think it's very efficient to eagerly collect this iter, but I don't know how to store
         // an "in-use" iterator in struct without generators.
         let data = self.refs.iter().flat_map(|r| r.verse_refs(bom)).collect();
