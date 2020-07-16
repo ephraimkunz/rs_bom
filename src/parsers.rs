@@ -120,7 +120,11 @@ pub mod gutenberg {
         }
     }
 
-    fn update_book_with_chunk(s: &str, previous_chunk: &ChunkType, bom: &mut BOM) -> Result<ChunkType, ParseError> {
+    fn update_book_with_chunk(
+        s: &str,
+        previous_chunk: &ChunkType,
+        bom: &mut BOM,
+    ) -> Result<ChunkType, ParseError> {
         let chunk = ChunkType::new(s);
         match chunk {
             ChunkType::BookTitle => match previous_chunk {
@@ -151,9 +155,7 @@ pub mod gutenberg {
                 }
             },
             ChunkType::ChapterStart => match previous_chunk {
-                ChunkType::BookTitle
-                | ChunkType::BookDescription
-                | ChunkType::Verse { .. } => {
+                ChunkType::BookTitle | ChunkType::BookDescription | ChunkType::Verse { .. } => {
                     if let Some(book) = bom.books.last_mut() {
                         book.chapters.push(Chapter { verses: vec![] });
                     }

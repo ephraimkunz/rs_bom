@@ -284,7 +284,7 @@ impl RangeCollection {
     /// # Errors
     ///
     /// Will return `Err` if `s` does not match a valid reference format.
-    /// Note that just because a reference parses does not make it valid. 
+    /// Note that just because a reference parses does not make it valid.
     /// Validity of a reference in a given book can be checked with `is_valid`.
     pub fn new(s: &str) -> Result<Self, BOMError> {
         s.parse()

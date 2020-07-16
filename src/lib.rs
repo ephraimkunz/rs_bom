@@ -12,7 +12,7 @@ pub trait BOMParser {
     type Err: std::error::Error;
     /// Parse using the parser-specific implementation.
     /// # Errors
-    /// 
+    ///
     /// Customize type of errors returned with `Err` associated type.
     fn parse(self) -> Result<BOM, Self::Err>;
 }
