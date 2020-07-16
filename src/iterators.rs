@@ -43,19 +43,6 @@ impl<'v> Iterator for VerseIter<'v> {
     }
 }
 
-#[derive(Debug)]
-struct ReferencedVerseIter<'v> {
-    bom: &'v BOM,
-    reference_collection: ReferenceCollection,
-}
-
-impl<'v> Iterator for ReferencedVerseIter<'v> {
-    type Item = VerseWithReference<'v>;
-    fn next(&mut self) -> Option<<Self as iter::Iterator>::Item> {
-        None
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
