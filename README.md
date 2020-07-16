@@ -1,4 +1,5 @@
 # rs-bom
+![CI](https://github.com/ephraimkunz/rs_bom/workflows/CI/badge.svg)
 
 ## Getting Started
 1. Clone the project.
