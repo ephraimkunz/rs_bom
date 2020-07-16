@@ -38,7 +38,7 @@ fn main() -> Result<(), anyhow::Error> {
     println!(
         "{}",
         bom.verse_matching(&single)
-            .ok_or(anyhow!("Unable to validate verse reference"))?
+            .ok_or_else(|| anyhow!("Unable to validate verse reference"))?
     );
 
     Ok(())

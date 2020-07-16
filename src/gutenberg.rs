@@ -36,10 +36,8 @@ impl ChunkType {
                 match (
                     VERSE
                         .captures(s)
-                        .and_then(|caps| Some(caps["short_title"].to_string())),
-                    VERSE
-                        .captures(s)
-                        .and_then(|caps| Some(caps["text"].to_string())),
+                        .map(|caps| caps["short_title"].to_string()),
+                    VERSE.captures(s).map(|caps| caps["text"].to_string()),
                     VERSE.captures(s).and_then(|caps| caps["num"].parse().ok()),
                 ) {
                     (Some(short_title), Some(verse), Some(verse_num)) => ChunkType::Verse {

@@ -111,30 +111,30 @@ impl Ord for RangeType {
             ) => match c.cmp(&oc) {
                 cmp::Ordering::Equal => match s.cmp(&os) {
                     cmp::Ordering::Equal => e.cmp(&oe),
-                    comp @ _ => comp,
+                    comp => comp,
                 },
-                comp @ _ => comp,
+                comp => comp,
             },
             (
                 RangeType::StartEndVerse { chapter: c, .. },
                 RangeType::StartEndChapter { start: os, end: oe },
             ) => match c.cmp(&os) {
                 cmp::Ordering::Equal => c.cmp(&oe),
-                comp @ _ => comp,
+                comp => comp,
             },
             (
                 RangeType::StartEndChapter { start: os, end: oe },
                 RangeType::StartEndVerse { chapter: c, .. },
             ) => match os.cmp(&c) {
                 cmp::Ordering::Equal => oe.cmp(&c),
-                comp @ _ => comp,
+                comp => comp,
             },
             (
                 RangeType::StartEndChapter { start: s, end: e },
                 RangeType::StartEndChapter { start: os, end: oe },
             ) => match s.cmp(&os) {
                 cmp::Ordering::Equal => e.cmp(&oe),
-                comp @ _ => comp,
+                comp => comp,
             },
         }
     }
@@ -156,7 +156,7 @@ impl Ord for VerseRangeReference {
     fn cmp(&self, other: &VerseRangeReference) -> cmp::Ordering {
         match self.book_index.cmp(&other.book_index) {
             cmp::Ordering::Equal => self.range_type.cmp(&other.range_type),
-            comp @ _ => comp,
+            comp => comp,
         }
     }
 }
@@ -268,7 +268,7 @@ struct ReferenceCollectionIter {
 impl Iterator for ReferenceCollectionIter {
     type Item = VerseReference;
     fn next(&mut self) -> Option<VerseReference> {
-        let data = self.data.get(self.index).map(|v| v.clone());
+        let data = self.data.get(self.index).cloned();
         self.index += 1;
         data
     }
@@ -289,7 +289,7 @@ impl ReferenceCollection {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
 
-    pub fn verse_refs<'a, 'b>(&'b self, bom: &'a BOM) -> impl Iterator<Item = VerseReference> {
+    pub fn verse_refs(&self, bom: &BOM) -> impl Iterator<Item = VerseReference> {
         // I don't think it's very efficient to eagerly collect this iter, but I don't know how to store
         // an "in-use" iterator in struct without generators.
         let data = self.refs.iter().flat_map(|r| r.verse_refs(bom)).collect();
@@ -478,7 +478,7 @@ impl str::FromStr for ReferenceCollection {
             };
         }
 
-        if references.len() == 0 {
+        if references.is_empty() {
             return Err(BOMError::ReferenceError(format!(
                 "Unable to parse any references from string: {}",
                 s
@@ -492,15 +492,15 @@ impl str::FromStr for ReferenceCollection {
 fn extract_range(s: &str) -> Result<(usize, usize), BOMError> {
     let split = s
         .split(|s| {
-            return s == RANGE_DELIM_CANONICAL
+            s == RANGE_DELIM_CANONICAL
                 || s == RANGE_DELIM_NON_CANONICAL1
-                || s == RANGE_DELIM_NON_CANONICAL2;
+                || s == RANGE_DELIM_NON_CANONICAL2
         })
         .collect::<Vec<_>>();
     match split.len() {
         1 => {
             let num = extract_number(split[0])?;
-            return Ok((num, num));
+            Ok((num, num))
         }
         2 => {
             let lower = extract_number(split[0])?;
@@ -509,14 +509,12 @@ fn extract_range(s: &str) -> Result<(usize, usize), BOMError> {
                 return Err(BOMError::ReferenceError(format!("Range is invalid: {}", s)));
             }
 
-            return Ok((lower, upper));
+            Ok((lower, upper))
         }
-        _ => {
-            return Err(BOMError::ReferenceError(format!(
-                "Too many dashes (-) found in {}",
-                s
-            )));
-        }
+        _ => Err(BOMError::ReferenceError(format!(
+            "Too many dashes (-) found in {}",
+            s
+        ))),
     }
 }
 
@@ -528,12 +526,9 @@ fn extract_book_name(s: &str) -> Result<(usize, usize), BOMError> {
 
     let s_trimmed = s.trim();
     if POSSIBLE_BOOK_NAME.is_match(s_trimmed) {
-        let caps = POSSIBLE_BOOK_NAME
-            .captures(s_trimmed)
-            .ok_or(BOMError::ReferenceError(format!(
-                "Book name not found as expected in {}",
-                s_trimmed
-            )))?;
+        let caps = POSSIBLE_BOOK_NAME.captures(s_trimmed).ok_or_else(|| {
+            BOMError::ReferenceError(format!("Book name not found as expected in {}", s_trimmed))
+        })?;
         let cap = caps["name"].trim();
         let trimmed = cap.trim();
         if BOOK_NAMES_TO_INDEX.contains_key(trimmed) {

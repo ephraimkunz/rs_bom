@@ -19,9 +19,9 @@ struct VerseIter<'v> {
 impl<'v> Iterator for VerseIter<'v> {
     type Item = VerseWithReference<'v>;
     fn next(&mut self) -> Option<<Self as iter::Iterator>::Item> {
-        let book = self.bom.books.iter().nth(self.position.book_index)?;
-        let chapter = book.chapters.iter().nth(self.position.chapter_index - 1)?;
-        let verse = chapter.verses.iter().nth(self.position.verse_index - 1)?;
+        let book = self.bom.books.get(self.position.book_index)?;
+        let chapter = book.chapters.get(self.position.chapter_index - 1)?;
+        let verse = chapter.verses.get(self.position.verse_index - 1)?;
 
         let result = VerseWithReference {
             reference: self.position.clone(),
