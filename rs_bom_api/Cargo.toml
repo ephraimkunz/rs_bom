@@ -1,0 +1,23 @@
+[package]
+name = "rs_bom_api"
+version = "0.1.0"
+authors = ["Ephraim Kunz <ephraimkunz@me.com>"]
+description = "REST Web API for Book of Mormon verse fetching"
+repository = "https://github.com/ephraimkunz/rs_bom/rs_bom_api"
+readme = "README.md"
+keywords = ["scripture", "BOM", "Book of Mormon", "LDS", "mormon", "Church of Jesus Christ"]
+categories = ["web-programming::http-server", "text-processing"]
+license = "MIT"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rs_bom = { path = "../rs_bom" }
+rocket = "0.4"
+serde = {version = "1.0", features = ["derive"]}
+
+[dependencies.rocket_contrib]
+version = "0.4"
+default-features = false
+features = ["json"]

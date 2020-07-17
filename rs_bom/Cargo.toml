@@ -1,0 +1,34 @@
+[package]
+name = "rs_bom"
+version = "0.1.0"
+authors = ["Ephraim Kunz <ephraimkunz@me.com>"]
+description = "Library and command line tool for parsing and analyzing Book of Mormon text and references."
+repository = "https://github.com/ephraimkunz/rs_bom/rs_bom"
+readme = "README.md"
+keywords = ["scripture", "BOM", "Book of Mormon", "LDS", "mormon", "Church of Jesus Christ"]
+categories = ["command-line-utilities", "text-processing"]
+license = "MIT"
+edition = "2018"
+
+[lib]
+name = "rs_bom"
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[dependencies]
+thiserror = "1.0"
+lazy_static = "1.4"
+regex = "1.3"
+anyhow = "1.0"
+rand = "0.7"
+serde = {version = "1.0", features = ["derive"]}
+
+[dev-dependencies]
+criterion = "0.3"
