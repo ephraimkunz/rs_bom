@@ -5,7 +5,7 @@ extern crate rocket;
 use lazy_static::lazy_static;
 use rand::Rng;
 use rocket_contrib::json::Json;
-use rs_bom::{VerseReference, VerseWithReference, BOM};
+use rs_bom::{RangeCollection, VerseReference, VerseWithReference, BOM};
 use serde::Serialize;
 
 lazy_static! {
@@ -24,6 +24,13 @@ struct WebVerseWithReference {
     reference: VerseReference,
     reference_string: String,
     text: String,
+}
+
+#[derive(Serialize, Debug)]
+struct WebParsedReference {
+    original_reference: String,
+    parsed_reference: String,
+    is_valid: bool,
 }
 
 impl<'a> From<VerseWithReference<'a>> for WebVerseWithReference {
@@ -62,6 +69,19 @@ fn random_verse() -> Result<Json<WebVerseWithReference>, WebBOMError> {
     Ok(Json(random_verse.into()))
 }
 
+#[get("/canonicalize/<reference_string>")]
+fn canonicalize(reference_string: String) -> Result<Json<WebParsedReference>, WebBOMError> {
+    let mut collection = RangeCollection::new(&reference_string)
+        .map_err(|e| WebBOMError::InvalidReference(format!("Error: {:}", e.to_string())))?;
+    collection.canonicalize();
+
+    Ok(Json(WebParsedReference {
+        original_reference: reference_string,
+        parsed_reference: collection.to_string(),
+        is_valid: collection.is_valid(&STATIC_BOM),
+    }))
+}
+
 #[catch(404)]
 fn not_found() -> String {
     String::from("The requested resource could not be found.")
@@ -69,7 +89,7 @@ fn not_found() -> String {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![single_verse, random_verse])
+        .mount("/", routes![single_verse, random_verse, canonicalize])
         .register(catchers![not_found])
         .launch();
 }

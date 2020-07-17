@@ -179,8 +179,8 @@ impl VerseRangeReference {
                     return false;
                 }
 
-                book.map(|b| b.chapters.get(start)).is_some()
-                    && book.map(|b| b.chapters.get(end)).is_some()
+                book.and_then(|b| b.chapters.get(start - 1)).is_some()
+                    && book.and_then(|b| b.chapters.get(end - 1)).is_some()
             }
             RangeType::StartEndVerse {
                 chapter,
@@ -191,12 +191,12 @@ impl VerseRangeReference {
                     return false;
                 }
 
-                book.and_then(|b| b.chapters.get(chapter))
-                    .and_then(|c| c.verses.get(start))
+                book.and_then(|b| b.chapters.get(chapter - 1))
+                    .and_then(|c| c.verses.get(start - 1))
                     .is_some()
                     && book
-                        .and_then(|b| b.chapters.get(chapter))
-                        .and_then(|c| c.verses.get(end))
+                        .and_then(|b| b.chapters.get(chapter - 1))
+                        .and_then(|c| c.verses.get(end - 1))
                         .is_some()
             }
         }
@@ -718,6 +718,20 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn is_valid_huge_chapter() {
+        let bom = BOM::from_default_parser().unwrap();
+        let parsed = "Alma 1000".parse::<RangeCollection>().unwrap();
+        assert!(!parsed.is_valid(&bom));
+    }
+
+    #[test]
+    fn is_valid_last_verse_in_chapter() {
+        let bom = BOM::from_default_parser().unwrap();
+        let parsed = "Alma 63:17".parse::<RangeCollection>().unwrap();
+        assert!(parsed.is_valid(&bom));
     }
 
     macro_rules! illegal_tests {
