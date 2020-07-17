@@ -47,7 +47,8 @@ impl BOM {
         Ok(bom)
     }
 
-    /// Return an iterator of verses matching the given RangeCollection.
+    /// Return an iterator of verses matching the given `RangeCollection`. Any invalid
+    /// verses in the `RangeCollection` are skipped.
     pub fn verses_matching(
         &self,
         range_collection: &RangeCollection,
@@ -110,7 +111,7 @@ pub enum BOMError {
     ReferenceError(String),
 }
 
-/// Everything needed to uniquely identify a single verse in the BOM.
+/// Everything needed to uniquely identify a single verse in the `BOM`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct VerseReference {
     book_index: usize,    // 0-based
@@ -120,6 +121,10 @@ pub struct VerseReference {
 
 impl VerseReference {
     /// Create a verse reference from parts.
+    /// # Arguments
+    /// * `book_index`: 0 indexed, 0 = 1 Nephi, etc.
+    /// * `chapter_index`: 1-indexed
+    /// * `verse_index`: 1-indexed
     #[must_use]
     pub const fn new(book_index: usize, chapter_index: usize, verse_index: usize) -> Self {
         Self {

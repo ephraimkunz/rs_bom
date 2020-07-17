@@ -282,6 +282,9 @@ pub struct RangeCollection {
 
 impl RangeCollection {
     /// Parses a given string `s` into an iterable collection.
+    ///
+    /// See [Wikipedia](https://en.wikipedia.org/wiki/Bible_citation) for some examples
+    /// of reference string that can be parsed.
     /// # Errors
     ///
     /// Will return `Err` if `s` does not match a valid reference format.
@@ -298,7 +301,7 @@ impl RangeCollection {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
 
-    /// Iterate over the RangeCollection, producing VerseReferences.
+    /// Iterate over the `RangeCollection`, producing `VerseReference`s.
     pub fn verse_refs(&self, bom: &BOM) -> impl Iterator<Item = VerseReference> {
         // I don't think it's very efficient to eagerly collect this iter, but I don't know how to store
         // an "in-use" iterator in struct without generators.
@@ -306,7 +309,7 @@ impl RangeCollection {
         RangeCollectionIter { data, index: 0 }
     }
 
-    /// Canonicalize the RangeCollection. Canonicalization means sorting by the book title,
+    /// Canonicalize the `RangeCollection`. Canonicalization means sorting by the book title,
     /// using standardized book names and symbols, and collapsing ranges of chapters and verses.
     pub fn canonicalize(&mut self) {
         // Sort collection by book, chapter / chapter range, verse / verse range.
