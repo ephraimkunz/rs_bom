@@ -61,4 +61,4 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: -- -W clippy::all -W clippy::pedantic -W clippy::nursery -W clippy::cargo -D warnings

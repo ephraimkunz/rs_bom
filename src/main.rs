@@ -13,11 +13,10 @@ fn main() -> Result<(), anyhow::Error> {
         .count();
 
     println!(
-        "{}: {} / {}\n{:.2}%\n",
+        "{}: {} / {}\n",
         ephraim,
         num_ephraim,
         total,
-        ((num_ephraim as f64) / (total as f64)) * 100_f64
     );
 
     let mut rng = rand::thread_rng();
