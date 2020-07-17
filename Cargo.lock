@@ -1066,6 +1066,8 @@ dependencies = [
 name = "rs_bom_api"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
+ "rand",
  "rocket",
  "rocket_contrib",
  "rs_bom",

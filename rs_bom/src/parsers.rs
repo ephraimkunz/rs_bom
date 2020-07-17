@@ -212,9 +212,8 @@ pub mod gutenberg {
                                 return Err(ParseError::CorpusInvalid(format!("Parser thought this verse was {} but text says it's verse {}: {}", expected_verse_number, verse_num, s)));
                             }
 
-                            chapter.verses.push(Verse {
-                                text: verse.clone(),
-                            })
+                            let v = verse.replace('\n', " ");
+                            chapter.verses.push(Verse { text: v })
                         }
                     }
                     _ => {

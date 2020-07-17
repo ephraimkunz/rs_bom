@@ -16,6 +16,8 @@ edition = "2018"
 rs_bom = { path = "../rs_bom" }
 rocket = "0.4"
 serde = {version = "1.0", features = ["derive"]}
+rand = "0.7"
+lazy_static = "1.4"
 
 [dependencies.rocket_contrib]
 version = "0.4"

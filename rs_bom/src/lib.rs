@@ -88,7 +88,7 @@ pub struct VerseWithReference<'v> {
     book_title: String, // Needed to display this without having to hold a reference to BOM.
     /// Reference of this verse.
     pub reference: VerseReference,
-    /// Raw text of the verse. Includes any newlines from the original corpus.
+    /// Raw text of the verse.
     pub text: &'v str,
 }
 
@@ -247,8 +247,8 @@ mod tests {
                         chapter_index: 3,
                         verse_index: 3,
                     },
-                    text: "For behold, Laban hath the record of the Jews and also a\n\
-                    genealogy of my forefathers, and they are engraven upon plates of\n\
+                    text: "For behold, Laban hath the record of the Jews and also a \
+                    genealogy of my forefathers, and they are engraven upon plates of \
                     brass.",
                 },
                 VerseWithReference {
@@ -258,8 +258,8 @@ mod tests {
                         chapter_index: 3,
                         verse_index: 4,
                     },
-                    text: "Wherefore, the Lord hath commanded me that thou and thy\n\
-                    brothers should go unto the house of Laban, and seek the records,\n\
+                    text: "Wherefore, the Lord hath commanded me that thou and thy \
+                    brothers should go unto the house of Laban, and seek the records, \
                     and bring them down hither into the wilderness.",
                 },
                 VerseWithReference {
@@ -269,8 +269,8 @@ mod tests {
                         chapter_index: 3,
                         verse_index: 5,
                     },
-                    text: "And now, behold thy brothers murmur, saying it is a hard thing\n\
-                    which I have required of them; but behold I have not required it\n\
+                    text: "And now, behold thy brothers murmur, saying it is a hard thing \
+                    which I have required of them; but behold I have not required it \
                     of them, but it is a commandment of the Lord.",
                 }
             ]
@@ -295,7 +295,7 @@ mod tests {
                     chapter_index: 3,
                     verse_index: 1,
                 },
-                text: "And it came to pass that I, Nephi, returned from speaking with\n\
+                text: "And it came to pass that I, Nephi, returned from speaking with \
                 the Lord, to the tent of my father.",
             }
         );
