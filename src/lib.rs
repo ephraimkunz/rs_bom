@@ -8,7 +8,10 @@ mod reference;
 pub use self::parsers::gutenberg;
 pub use self::reference::RangeCollection;
 
+/// Plugin interface for creating a new Book of Mormon parser. Primarily designed
+/// to make it easier to add new languages later.
 pub trait BOMParser {
+    /// Error type to be returned if there is a failure while parsing.
     type Err: std::error::Error;
     /// Parse using the parser-specific implementation.
     /// # Errors
@@ -17,6 +20,7 @@ pub trait BOMParser {
     fn parse(self) -> Result<BOM, Self::Err>;
 }
 
+/// Represents a parsed copy of the Book of Mormon.
 #[derive(Debug)]
 pub struct BOM {
     title: String,
@@ -43,6 +47,7 @@ impl BOM {
         Ok(bom)
     }
 
+    /// Return an iterator of verses matching the given RangeCollection.
     pub fn verses_matching(
         &self,
         range_collection: &RangeCollection,
@@ -52,6 +57,8 @@ impl BOM {
             .filter_map(move |i| self.verse_matching(&i))
     }
 
+    /// Return a single verse matching the given verse reference. If the reference is invalid,
+    /// returns `None`.
     #[must_use]
     pub fn verse_matching(&self, r: &VerseReference) -> Option<VerseWithReference> {
         if r.is_valid(self) {
@@ -70,10 +77,13 @@ impl BOM {
     }
 }
 
+/// Represents the text of a verse and it's reference.
 #[derive(Debug, PartialEq)]
 pub struct VerseWithReference<'v> {
     book_title: String, // Needed to display this without having to hold a reference to BOM.
+    /// Reference of this verse.
     pub reference: VerseReference,
+    /// Raw text of the verse. Includes any newlines from the original corpus.
     pub text: &'v str,
 }
 
@@ -87,6 +97,7 @@ impl<'v> fmt::Display for VerseWithReference<'v> {
     }
 }
 
+/// All possible errors that this library can return.
 #[derive(Error, Debug)]
 pub enum BOMError {
     #[error("BOM text parsing error")]
@@ -99,7 +110,7 @@ pub enum BOMError {
     ReferenceError(String),
 }
 
-// Everything needed to uniquely identify a single verse.
+/// Everything needed to uniquely identify a single verse in the BOM.
 #[derive(Debug, Clone, PartialEq)]
 pub struct VerseReference {
     book_index: usize,    // 0-based
@@ -108,6 +119,7 @@ pub struct VerseReference {
 }
 
 impl VerseReference {
+    /// Create a verse reference from parts.
     #[must_use]
     pub const fn new(book_index: usize, chapter_index: usize, verse_index: usize) -> Self {
         Self {

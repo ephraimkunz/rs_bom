@@ -274,6 +274,7 @@ impl Iterator for RangeCollectionIter {
     }
 }
 
+/// Represents a collection of verses that may include ranges of verses or chapters.
 #[derive(Debug)]
 pub struct RangeCollection {
     refs: Vec<VerseRangeReference>,
@@ -290,11 +291,14 @@ impl RangeCollection {
         s.parse()
     }
 
+    /// Returns whether this is a valid collection. Validity means that all chapters, books,
+    /// and verses specified are actually navigable references in `BOM`.
     #[must_use]
     pub fn is_valid(&self, bom: &BOM) -> bool {
         self.refs.iter().all(|r| r.is_valid(bom))
     }
 
+    /// Iterate over the RangeCollection, producing VerseReferences.
     pub fn verse_refs(&self, bom: &BOM) -> impl Iterator<Item = VerseReference> {
         // I don't think it's very efficient to eagerly collect this iter, but I don't know how to store
         // an "in-use" iterator in struct without generators.
@@ -302,6 +306,8 @@ impl RangeCollection {
         RangeCollectionIter { data, index: 0 }
     }
 
+    /// Canonicalize the RangeCollection. Canonicalization means sorting by the book title,
+    /// using standardized book names and symbols, and collapsing ranges of chapters and verses.
     pub fn canonicalize(&mut self) {
         // Sort collection by book, chapter / chapter range, verse / verse range.
         self.refs.sort();

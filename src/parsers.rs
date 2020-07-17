@@ -1,9 +1,23 @@
+/// Parser for the [Gutenberg English BOM](http://www.gutenberg.org/ebooks/17) text.
 pub mod gutenberg {
     use crate::{BOMParser, Book, Chapter, Verse, WitnessTestimony, BOM};
     use lazy_static::lazy_static;
     use regex::Regex;
     use std::{fs, io, path};
     use thiserror::Error;
+
+    /// Errors when parsing the Gutenberg text.
+    #[derive(Error, Debug)]
+    pub enum ParseError {
+        #[error("Gutenberg corpus not found")]
+        CorpusNotFound {
+            #[from]
+            source: io::Error,
+        },
+
+        #[error("Corpus invalid: {0}")]
+        CorpusInvalid(String),
+    }
 
     #[derive(PartialEq)]
     enum ChunkType {
@@ -53,11 +67,14 @@ pub mod gutenberg {
         }
     }
 
+    /// Does the work of parsing.
     pub struct Parser {
         path: path::PathBuf,
     }
 
     impl Parser {
+        /// Path to Gutenberg corpus. Corpus must be a single file starting with
+        /// 1 Nephi 1.
         #[must_use]
         pub fn new(path: &path::Path) -> Self {
             Self { path: path.into() }
@@ -217,18 +234,6 @@ pub mod gutenberg {
         }
 
         Ok(chunk)
-    }
-
-    #[derive(Error, Debug)]
-    pub enum ParseError {
-        #[error("Gutenberg corpus not found")]
-        CorpusNotFound {
-            #[from]
-            source: io::Error,
-        },
-
-        #[error("Corpus invalid: {0}")]
-        CorpusInvalid(String),
     }
 
     const TITLE_PAGE_TEXT: &str = "THE BOOK OF MORMON

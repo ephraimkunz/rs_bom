@@ -2,6 +2,7 @@ use crate::{VerseReference, VerseWithReference, BOM};
 use std::iter;
 
 impl BOM {
+    /// Iterate over all verses in the entire book.
     pub fn verses(&self) -> impl Iterator<Item = VerseWithReference> {
         VerseIter {
             bom: self,

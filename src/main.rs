@@ -12,12 +12,7 @@ fn main() -> Result<(), anyhow::Error> {
         .filter(|v| v.text.to_lowercase().contains(ephraim))
         .count();
 
-    println!(
-        "{}: {} / {}\n",
-        ephraim,
-        num_ephraim,
-        total,
-    );
+    println!("{}: {} / {}\n", ephraim, num_ephraim, total,);
 
     let mut rng = rand::thread_rng();
     let r = rng.gen_range(0, total);
