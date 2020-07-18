@@ -18,5 +18,6 @@
 
 ### Crate rs_bom_api
 * JSON RESTful API for all of the above
+* Swagger (OpenAPI) documentation built-in.
 
 
