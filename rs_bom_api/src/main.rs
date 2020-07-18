@@ -107,13 +107,13 @@ fn not_found() -> String {
 fn main() {
     rocket::ignite()
         .mount(
-            "/bom_api/v1",
+            "/",
             routes_with_openapi![single_verse, verses, random_verse, canonicalize],
         )
         .mount(
-            "/swagger/",
+            "/",
             make_swagger_ui(&SwaggerUIConfig {
-                url: "/bom_api/v1/openapi.json".to_owned(),
+                url: "/openapi.json".to_owned(),
                 ..Default::default()
             }),
         )
