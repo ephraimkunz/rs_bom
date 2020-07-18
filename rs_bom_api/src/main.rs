@@ -4,7 +4,10 @@ extern crate rocket;
 
 use lazy_static::lazy_static;
 use rand::Rng;
+use rocket::response::status;
 use rocket_contrib::json::Json;
+use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
+use rocket_okapi::{openapi, routes_with_openapi, JsonSchema};
 use rs_bom::{RangeCollection, VerseReference, VerseWithReference, BOM};
 use serde::Serialize;
 
@@ -13,20 +16,14 @@ lazy_static! {
         BOM::from_default_parser().expect("Failed to get BOM from defaul parser");
 }
 
-#[derive(Responder, Debug)]
-enum WebBOMError {
-    #[response(status = 400)]
-    InvalidReference(String),
-}
-
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, JsonSchema)]
 struct WebVerseWithReference {
     reference: VerseReference,
     reference_string: String,
     text: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, JsonSchema)]
 struct WebParsedReference {
     original_reference: String,
     parsed_reference: String,
@@ -47,32 +44,52 @@ impl<'a> From<VerseWithReference<'a>> for WebVerseWithReference {
     }
 }
 
+#[openapi]
 #[get("/verse/<book>/<chapter>/<verse>")]
 fn single_verse(
     book: usize,
     chapter: usize,
     verse: usize,
-) -> Result<Json<WebVerseWithReference>, WebBOMError> {
+) -> Result<Json<WebVerseWithReference>, status::NotFound<String>> {
     let reference = VerseReference::new(book, chapter, verse);
     STATIC_BOM
         .verse_matching(&reference)
         .map(|v| Json(v.into()))
-        .ok_or_else(|| WebBOMError::InvalidReference(format!("Invalid reference: {:?}", reference)))
+        .ok_or_else(|| status::NotFound(format!("Invalid reference: {:?}", reference)))
 }
 
+#[openapi]
+#[get("/verses/<reference_string>")]
+fn verses(
+    reference_string: String,
+) -> Result<Json<Vec<WebVerseWithReference>>, status::NotFound<String>> {
+    let reference = RangeCollection::new(&reference_string)
+        .map_err(|e| status::NotFound(format!("Error: {:}", e.to_string())))?;
+
+    let verses: Vec<_> = STATIC_BOM
+        .verses_matching(&reference)
+        .map(|v| v.into())
+        .collect();
+    Ok(Json(verses))
+}
+
+#[openapi]
 #[get("/verse/random")]
-fn random_verse() -> Result<Json<WebVerseWithReference>, WebBOMError> {
+fn random_verse() -> Json<WebVerseWithReference> {
     let verses = STATIC_BOM.verses();
     let mut rng = rand::thread_rng();
     let r = rng.gen_range(0, verses.count());
     let random_verse = STATIC_BOM.verses().nth(r).unwrap();
-    Ok(Json(random_verse.into()))
+    Json(random_verse.into())
 }
 
+#[openapi]
 #[get("/canonicalize/<reference_string>")]
-fn canonicalize(reference_string: String) -> Result<Json<WebParsedReference>, WebBOMError> {
+fn canonicalize(
+    reference_string: String,
+) -> Result<Json<WebParsedReference>, status::NotFound<String>> {
     let mut collection = RangeCollection::new(&reference_string)
-        .map_err(|e| WebBOMError::InvalidReference(format!("Error: {:}", e.to_string())))?;
+        .map_err(|e| status::NotFound(format!("Error: {:}", e.to_string())))?;
     collection.canonicalize();
 
     Ok(Json(WebParsedReference {
@@ -89,7 +106,17 @@ fn not_found() -> String {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![single_verse, random_verse, canonicalize])
+        .mount(
+            "/bom_api/v1",
+            routes_with_openapi![single_verse, verses, random_verse, canonicalize],
+        )
+        .mount(
+            "/swagger/",
+            make_swagger_ui(&SwaggerUIConfig {
+                url: "/bom_api/v1/openapi.json".to_owned(),
+                ..Default::default()
+            }),
+        )
         .register(catchers![not_found])
         .launch();
 }

@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::Serialize;
 use std::{fmt, path};
 use thiserror::Error;
@@ -116,7 +117,7 @@ pub enum BOMError {
 }
 
 /// Everything needed to uniquely identify a single verse in the `BOM`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct VerseReference {
     book_index: usize,    // 0-based
     chapter_index: usize, // 1-based
