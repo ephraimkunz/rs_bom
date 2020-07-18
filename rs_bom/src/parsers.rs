@@ -3,7 +3,7 @@ pub mod gutenberg {
     use crate::{BOMParser, Book, Chapter, Verse, WitnessTestimony, BOM};
     use lazy_static::lazy_static;
     use regex::Regex;
-    use std::{fs, io, path};
+    use std::{borrow::Cow, fs, io, path};
     use thiserror::Error;
 
     /// Errors when parsing the Gutenberg text.
@@ -69,7 +69,7 @@ pub mod gutenberg {
 
     /// Does the work of parsing.
     pub struct Parser {
-        path: path::PathBuf,
+        path: Option<path::PathBuf>,
     }
 
     impl Parser {
@@ -77,14 +77,37 @@ pub mod gutenberg {
         /// 1 Nephi 1.
         #[must_use]
         pub fn new(path: &path::Path) -> Self {
-            Self { path: path.into() }
+            Self {
+                path: Some(path.into()),
+            }
+        }
+
+        /// Use the Gutenberg corpus specified at compile time and included in the binary.
+        /// This makes it more convenient when using this library as part of standalone
+        /// binary, since there's no additional corpus file to copy around.
+        #[must_use]
+        pub fn from_default_corpus() -> Self {
+            Self { path: None }
+        }
+
+        fn corpus_text(&self) -> Result<Cow<str>, ParseError> {
+            match &self.path {
+                None => {
+                    let s = include_str!("../data/gutenberg.txt");
+                    Ok(Cow::Borrowed(s))
+                }
+                Some(path) => {
+                    let s = fs::read_to_string(path)?;
+                    Ok(Cow::Owned(s))
+                }
+            }
         }
     }
 
     impl BOMParser for Parser {
         type Err = ParseError;
         fn parse(self) -> Result<BOM, Self::Err> {
-            let s = fs::read_to_string(self.path)?;
+            let s = self.corpus_text()?;
 
             let mut bom = BOM {
                 title: "The Book of Mormon".to_string(),

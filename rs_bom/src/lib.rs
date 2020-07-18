@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::Serialize;
-use std::{fmt, path};
+use std::fmt;
 use thiserror::Error;
 
 mod iterators;
@@ -43,11 +43,7 @@ impl BOM {
     // This could happen if the corpus is corrupt, non-existant, or doesn't
     // match the expected format.
     pub fn from_default_parser() -> Result<Self, BOMError> {
-        let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let path_str = format!("{}/data/gutenberg.txt", manifest_dir);
-        let corpus_path = path::Path::new(&path_str);
-
-        let parser = gutenberg::Parser::new(corpus_path);
+        let parser = gutenberg::Parser::from_default_corpus();
         let bom = parser.parse()?;
         Ok(bom)
     }
