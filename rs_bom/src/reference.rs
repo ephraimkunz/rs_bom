@@ -327,93 +327,94 @@ impl RangeCollection {
             let chap_range = r.range_type.chapter_range();
             let verse_range = r.range_type.verse_range();
 
-            // In same book.
-            if r.book_index == current_book {
-                // Overlapping chapter ranges
-                if chap_range.0 >= current_chap_range.0
-                    && chap_range.0 <= (current_chap_range.1 + 1)
-                {
-                    match (verse_range, current_verse_range) {
-                        (None, None) => {
-                            if verse_range.is_none() && current_verse_range.is_none() {
-                                // Both chapter-only ranges. Take the union of their covered area.
-                                let min_chap = current_chap_range.0.min(chap_range.0);
-                                let max_chap = current_chap_range.1.max(chap_range.1);
-                                let combined_ref = VerseRangeReference {
-                                    book_index: current_book,
-                                    range_type: RangeType::StartEndChapter {
-                                        start: min_chap,
-                                        end: max_chap,
-                                    },
-                                };
+            let in_same_book = r.book_index == current_book;
+            let overlapping_chapter_ranges =
+                chap_range.0 >= current_chap_range.0 && chap_range.0 <= (current_chap_range.1 + 1);
+            let is_collapsible = in_same_book && overlapping_chapter_ranges;
+            if is_collapsible {
+                match (verse_range, current_verse_range) {
+                    (None, None) => {
+                        if verse_range.is_none() && current_verse_range.is_none() {
+                            // Both chapter-only ranges. Take the union of their covered area.
+                            let min_chap = current_chap_range.0.min(chap_range.0);
+                            let max_chap = current_chap_range.1.max(chap_range.1);
+                            let combined_ref = VerseRangeReference {
+                                book_index: current_book,
+                                range_type: RangeType::StartEndChapter {
+                                    start: min_chap,
+                                    end: max_chap,
+                                },
+                            };
 
-                                current_ref = combined_ref.clone();
-                                current_book = current_ref.book_index;
-                                current_chap_range = current_ref.range_type.chapter_range();
-                                current_verse_range = current_ref.range_type.verse_range();
+                            current_ref = combined_ref.clone();
+                            current_book = current_ref.book_index;
+                            current_chap_range = current_ref.range_type.chapter_range();
+                            current_verse_range = current_ref.range_type.verse_range();
 
-                                new_refs.pop();
-                                new_refs.push(combined_ref);
-                                continue;
-                            }
+                            new_refs.pop();
+                            new_refs.push(combined_ref);
+                            continue;
                         }
+                    }
 
-                        (Some(vr), Some(cvr)) => {
-                            // Overlapping verse ranges
-                            if vr.0 >= cvr.0 && vr.0 <= (cvr.1 + 1) {
-                                let min_verse = cvr.0.min(vr.0);
-                                let max_verse = cvr.1.max(vr.1);
-                                let combined_ref = VerseRangeReference {
-                                    book_index: current_book,
-                                    range_type: RangeType::StartEndVerse {
-                                        start: min_verse,
-                                        end: max_verse,
-                                        chapter: current_chap_range.0, // We can use any of the chapter ranges, arbitrary choice since all the same.
-                                    },
-                                };
+                    (Some(vr), Some(cvr)) => {
+                        // Overlapping verse ranges
+                        if vr.0 >= cvr.0 && vr.0 <= (cvr.1 + 1) {
+                            let min_verse = cvr.0.min(vr.0);
+                            let max_verse = cvr.1.max(vr.1);
+                            let combined_ref = VerseRangeReference {
+                                book_index: current_book,
+                                range_type: RangeType::StartEndVerse {
+                                    start: min_verse,
+                                    end: max_verse,
+                                    chapter: current_chap_range.0, // We can use any of the chapter ranges, arbitrary choice since all the same.
+                                },
+                            };
 
-                                current_ref = combined_ref.clone();
-                                current_book = current_ref.book_index;
-                                current_chap_range = current_ref.range_type.chapter_range();
-                                current_verse_range = current_ref.range_type.verse_range();
+                            current_ref = combined_ref.clone();
+                            current_book = current_ref.book_index;
+                            current_chap_range = current_ref.range_type.chapter_range();
+                            current_verse_range = current_ref.range_type.verse_range();
 
-                                new_refs.pop();
-                                new_refs.push(combined_ref);
-                                continue;
-                            }
+                            new_refs.pop();
+                            new_refs.push(combined_ref);
+                            continue;
                         }
-                        _ => {
-                            // We know that they have overlapping chapter ranges, and that one is a full chapter (None).
-                            // the right way to handle this is to keep the full chapter and eliminate single verses in it.
-                            if verse_range.is_none() {
-                                // Keep the new range.
-                                let combined_ref = VerseRangeReference {
-                                    book_index: current_book,
-                                    range_type: RangeType::StartEndChapter {
-                                        start: chap_range.0,
-                                        end: chap_range.1,
-                                    },
-                                };
+                    }
+                    _ => {
+                        // We know that they have overlapping chapter ranges, and that one is a full chapter (None).
+                        // The right way to handle this is to keep the full chapter and eliminate single verses in it.
+                        if verse_range.is_none() {
+                            // Keep the new range.
+                            let combined_ref = VerseRangeReference {
+                                book_index: current_book,
+                                range_type: RangeType::StartEndChapter {
+                                    start: chap_range.0,
+                                    end: chap_range.1,
+                                },
+                            };
 
-                                current_ref = combined_ref.clone();
-                                current_book = current_ref.book_index;
-                                current_chap_range = current_ref.range_type.chapter_range();
-                                current_verse_range = current_ref.range_type.verse_range();
+                            current_ref = combined_ref.clone();
+                            current_book = current_ref.book_index;
+                            current_chap_range = current_ref.range_type.chapter_range();
+                            current_verse_range = current_ref.range_type.verse_range();
 
-                                new_refs.pop();
-                                new_refs.push(combined_ref);
-                                continue;
-                            }
+                            new_refs.pop();
+                            new_refs.push(combined_ref);
                         }
+                        // Since we'll just take 1 of the two references, either remove the existing one on the array
+                        // and add a new one (above), or keep the one already and don't add or remove anything (here).
+                        continue;
                     }
                 }
             }
 
+            // Nothing to collapse, just add the reference.
             current_ref = r.clone();
             current_book = current_ref.book_index;
             current_chap_range = current_ref.range_type.chapter_range();
             current_verse_range = current_ref.range_type.verse_range();
-            new_refs.push(r.clone()); // Nothing to combine.
+            new_refs.push(r.clone());
         }
 
         self.refs = new_refs;
@@ -685,6 +686,10 @@ mod tests {
             (
                 "Alma 3:18–19, 16–17; Mosiah 3:18",
                 "Mosiah 3:18; Alma 3:16–19",
+            ),
+            (
+                "1 Nephi 1; 1 Nephi 2; 1 Nephi 1:1-3; 1 Nephi 5:6",
+                "1 Ne. 1–2; 5:6",
             ),
             ("Alma 3:18–19, 16–17; Alma 3; Alma 4", "Alma 3–4"),
             ("Alma 3:16, 17, 18–19", "Alma 3:16–19"),
