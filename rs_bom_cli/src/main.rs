@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use rand::Rng;
+use regex::RegexBuilder;
 use rs_bom::{RangeCollection, VerseReference, BOM};
 
 fn main() -> Result<(), anyhow::Error> {
@@ -34,6 +35,16 @@ fn main() -> Result<(), anyhow::Error> {
         bom.verse_matching(&single)
             .ok_or_else(|| anyhow!("Unable to validate verse reference"))?
     );
+
+    let re = RegexBuilder::new("Gazelem")
+        .case_insensitive(true)
+        .build()
+        .unwrap();
+    let matches: Vec<_> = bom.verses().filter(|v| re.is_match(v.text)).collect();
+    println!("\n\n{}", matches.len());
+    for m in matches.iter().take(10) {
+        println!("{}", m)
+    }
 
     Ok(())
 }

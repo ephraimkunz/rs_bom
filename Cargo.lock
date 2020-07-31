@@ -1149,10 +1149,8 @@ dependencies = [
 name = "rs_bom"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "criterion",
  "lazy_static",
- "rand",
  "regex",
  "schemars",
  "serde",
@@ -1172,6 +1170,16 @@ dependencies = [
  "rs_bom",
  "schemars",
  "serde",
+]
+
+[[package]]
+name = "rs_bom_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rand",
+ "regex",
+ "rs_bom",
 ]
 
 [[package]]
