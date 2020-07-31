@@ -12,12 +12,16 @@
 
 ## Features
 ### Crate rs_bom
+* Core functionality of Book of Mormon parsing.
 * Iter over all the verses in the Book of Mormon. 
 * Fetch standalone verses by reference.
 * Parse arbitrary reference strings using the format specified [here](https://en.wikipedia.org/wiki/Bible_citation). Canonicalize these references and iterate over the verses in them. For example, given a string of `Alma 3:18–19, 16–17; Alma 3; Alma 4` we can canonicalize it to `Alma 3–4`. Similarly, we canonicalize `Alma 16, 18, 19` to `Alma 16, 18–19`.
 
+### Crate rs_bom_cli
+* CLI app providing rich terminal interface to the Book of Mormon.
+
 ### Crate rs_bom_api
-* JSON RESTful API for all of the above
+* JSON RESTful API for all functionality exposed by `rs_bom`.
 * Swagger (OpenAPI) documentation built-in.
 
 
