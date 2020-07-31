@@ -4,7 +4,7 @@
 
 ## Getting Started
 1. Clone the project.
-2. Inside the project directory, run `cargo run` to execute the binary target.
+2. Inside the project directory, run `cargo run --bin rs_bom_cli` to run the command-line app. Run `cargo run --bin rs_bom_api` to start serving the RESTful API.
 3. Run `cargo doc --open` to generate the docs.
 4. Run `cargo test` to run tests.
 5. Run `cargo fuzz run reference` to run the reference parser fuzzer.
