@@ -1,6 +1,7 @@
 # rs-bom
 ![CI](https://github.com/ephraimkunz/rs_bom/workflows/CI/badge.svg)
 ![Security audit](https://github.com/ephraimkunz/rs_bom/workflows/Security%20audit/badge.svg)
+![Dependabot](https://flat.badgen.net/dependabot/ephraimkunz/rs_bom?icon=dependabot)
 
 ## Getting Started
 1. Clone the project.
