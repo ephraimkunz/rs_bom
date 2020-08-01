@@ -114,7 +114,7 @@ fn main() {
             "/",
             make_swagger_ui(&SwaggerUIConfig {
                 url: "/openapi.json".to_owned(),
-                ..Default::default()
+                ..SwaggerUIConfig::default()
             }),
         )
         .register(catchers![not_found])

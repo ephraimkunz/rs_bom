@@ -86,7 +86,7 @@ pub mod gutenberg {
         /// This makes it more convenient when using this library as part of standalone
         /// binary, since there's no additional corpus file to copy around.
         #[must_use]
-        pub fn from_default_corpus() -> Self {
+        pub const fn from_default_corpus() -> Self {
             Self { path: None }
         }
 

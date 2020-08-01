@@ -32,11 +32,11 @@ fn main() -> Result<(), anyhow::Error> {
     let bom = BOM::from_default_parser()?;
 
     match matches.subcommand() {
-        ("text", Some(_)) => {
+        ("text", _) => {
             let all_verses: Vec<_> = bom.verses().map(|v| v.text).collect();
             println!("{}", all_verses.join("\n"));
         }
-        ("random", Some(_)) => {
+        ("random", _) => {
             let mut rng = rand::thread_rng();
             let r = rng.gen_range(0, bom.verses().count());
             let random_verse = bom.verses().nth(r).unwrap();
@@ -48,9 +48,8 @@ fn main() -> Result<(), anyhow::Error> {
             // Try to parse as a reference first.
             let range = RangeCollection::new(search);
             if let Ok(range) = range {
-                for verse in bom.verses_matching(&range) {
-                    println!("{}", verse);
-                }
+                let verses: Vec<_> = bom.verses_matching(&range).map(|v| v.to_string()).collect();
+                println!("{}", verses.join("\n\n"));
             } else {
                 // If that failed, try to parse as free form text.
                 let num_matches = value_t!(submatches.value_of("num_matches"), usize)

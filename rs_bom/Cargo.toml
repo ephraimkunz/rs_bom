@@ -6,7 +6,7 @@ description = "Library for parsing and analyzing Book of Mormon text and referen
 repository = "https://github.com/ephraimkunz/rs_bom/tree/master/rs_bom"
 readme = "README.md"
 keywords = ["scripture", "BOM", "Book of Mormon", "LDS", "mormon", "Church of Jesus Christ"]
-categories = ["command-line-utilities", "text-processing"]
+categories = ["text-processing"]
 license = "MIT"
 edition = "2018"
 
