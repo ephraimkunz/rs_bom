@@ -26,6 +26,12 @@ fn main() -> Result<()> {
                         .long("num_matches")
                         .help("The maximum number of search results to return")
                         .default_value("10"),
+                )
+                .arg(
+                    Arg::with_name("count_matches")
+                        .short("c")
+                        .long("count_matches")
+                        .help("First line of returned data is the total number of verses matching the query")
                 ),
         )
         .subcommand(SubCommand::with_name("random").about("Output a random verse"))
@@ -47,25 +53,35 @@ fn main() -> Result<()> {
         }
         ("search", Some(submatches)) => {
             let search = submatches.value_of("query").unwrap();
+            let matches: Vec<String>;
+            let total_match_count: usize;
 
             // Try to parse as a reference first.
             let range = RangeCollection::new(search);
             if let Ok(range) = range {
-                let verses: Vec<_> = bom.verses_matching(&range).map(|v| v.to_string()).collect();
-                println!("{}", verses.join("\n\n"));
+                matches = bom.verses_matching(&range).map(|v| v.to_string()).collect();
+                total_match_count = matches.len();
             } else {
                 // If that failed, try to parse as free form text.
                 let num_matches = value_t!(submatches.value_of("num_matches"), usize)
                     .unwrap_or_else(|e| e.exit());
                 let re = Regex::new(&format!(r"(?i){}", search)).unwrap();
-                let verses: Vec<_> = bom
+
+                total_match_count = bom.verses().filter(|v| re.is_match(v.text)).count();
+
+                matches = bom
                     .verses()
                     .filter(|v| re.is_match(v.text))
                     .take(num_matches)
                     .map(|v| v.to_string())
                     .collect();
-                println!("{}", verses.join("\n\n"))
             }
+
+            if submatches.is_present("count_matches") {
+                println!("{}", total_match_count);
+            }
+
+            println!("{}", matches.join("\n\n"));
         }
         _ => unreachable!(),
     }

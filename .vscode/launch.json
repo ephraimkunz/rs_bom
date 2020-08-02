@@ -75,7 +75,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["random"],
+            "args": ["search", "Alma 5:15-63"],
             "cwd": "${workspaceFolder}"
         },
     ]
