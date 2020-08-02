@@ -81,7 +81,9 @@ fn main() -> Result<()> {
                 println!("{}", total_match_count);
             }
 
-            println!("{}", matches.join("\n\n"));
+            if !matches.is_empty() {
+                println!("{}", matches.join("\n\n"));
+            }
         }
         _ => unreachable!(),
     }
