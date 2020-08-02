@@ -51,19 +51,15 @@ pub mod gutenberg {
                 _ if s.lines().count() == 1 && s.to_uppercase() == s => Self::BookTitle,
                 _ if CHAPTER_START.is_match(s) => Self::ChapterStart,
                 _ if VERSE.is_match(s) => {
-                    match (
-                        VERSE
-                            .captures(s)
-                            .map(|caps| caps["short_title"].to_string()),
-                        VERSE.captures(s).map(|caps| caps["text"].to_string()),
-                        VERSE.captures(s).and_then(|caps| caps["num"].parse().ok()),
-                    ) {
-                        (Some(short_title), Some(verse), Some(verse_num)) => Self::Verse {
-                            short_title,
-                            verse,
-                            verse_num,
-                        },
-                        _ => Self::Unrecognized,
+                    let caps = VERSE.captures(s).unwrap(); // Must be valid if is_match returned true.
+                    if let Ok(num) = caps["num"].parse() {
+                        Self::Verse {
+                            short_title: caps["short_title"].to_string(),
+                            verse: caps["text"].to_string(),
+                            verse_num: num,
+                        }
+                    } else {
+                        Self::Unrecognized
                     }
                 }
                 _ => Self::BookDescription,
