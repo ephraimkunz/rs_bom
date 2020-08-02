@@ -3,8 +3,7 @@ use clap::{value_t, App, AppSettings, Arg, SubCommand};
 use rand::Rng;
 use regex::Regex;
 use rs_bom::{RangeCollection, BOM};
-use std::env;
-use std::fs;
+use std::{env, fs};
 
 fn main() -> Result<()> {
     let matches = App::new(env!("CARGO_PKG_NAME"))
@@ -12,6 +11,7 @@ fn main() -> Result<()> {
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .setting(AppSettings::SubcommandRequired)
+        .arg(Arg::with_name("delete_cache").short("d").long("delete_cache").help("Delete any cache files before running"))
         .subcommand(
             SubCommand::with_name("search")
                 .about("Search by reference ('1 Nephi 5:3-6') or with a free-form string ('dwelt in a')")
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
         .subcommand(SubCommand::with_name("text").about("Output the entire Book of Mormon text"))
         .get_matches();
 
-    let bom = get_bom()?;
+    let bom = get_bom(matches.is_present("delete_cache"))?;
 
     match matches.subcommand() {
         ("text", _) => {
@@ -69,27 +69,41 @@ fn main() -> Result<()> {
         }
         _ => unreachable!(),
     }
-
     Ok(())
 }
 
-fn get_bom() -> Result<BOM> {
-    // Try to de-serialize a cached bincode versions (to avoid re-parsing all the source),
+fn get_bom(delete_cache: bool) -> Result<BOM> {
+    // Try to de-serialize a cached bincode version (to avoid re-parsing all the source),
     // or if that fails fallback to parsing the source.
     const TEMP_FILE_NAME: &str = "rs_bom_serialized";
     let mut file_path = env::temp_dir();
     file_path.push(TEMP_FILE_NAME);
-    println!("{:?}", file_path);
+
+    if delete_cache {
+        fs::remove_file(&file_path)?;
+    }
+
+    let mut from_cache = false;
 
     let bom = match fs::read(&file_path) {
         Ok(data) => match bincode::deserialize(data.as_slice()) {
-            Err(_) => BOM::from_default_parser(),
-            Ok(bom) => Ok(bom),
+            Ok(bom) => {
+                from_cache = true;
+                Ok(bom)
+            }
+            _ => BOM::from_default_parser(),
         },
         _ => BOM::from_default_parser(),
     }?;
 
-    let out_file = fs::File::create(file_path)?;
-    bincode::serialize_into(out_file, &bom)?;
+    // Create a cache file if we just ended up parsing the corpus.
+    // If creating the cache file or serializing the BOM struct into it fail, don't fail the
+    // program. This cache is just to speed up our app and the app can continue to work without it.
+    if !from_cache {
+        if let Ok(out_file) = fs::File::create(&file_path) {
+            let _ = bincode::serialize_into(out_file, &bom);
+        }
+    }
+
     Ok(bom)
 }

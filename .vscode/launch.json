@@ -1,0 +1,82 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'rs_bom'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=rs_bom"
+                ],
+                "filter": {
+                    "name": "rs_bom",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'benchmark'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=benchmark",
+                    "--package=rs_bom"
+                ],
+                "filter": {
+                    "name": "benchmark",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rs_bom_api'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rs_bom_api",
+                    "--package=rs_bom_api"
+                ],
+                "filter": {
+                    "name": "rs_bom_api",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rs_bom_cli'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rs_bom_cli",
+                    "--package=rs_bom_cli"
+                ],
+                "filter": {
+                    "name": "rs_bom_cli",
+                    "kind": "bin"
+                }
+            },
+            "args": ["random"],
+            "cwd": "${workspaceFolder}"
+        },
+    ]
+}

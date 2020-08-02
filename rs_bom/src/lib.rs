@@ -23,7 +23,7 @@ pub trait BOMParser {
 }
 
 /// Represents a parsed copy of the Book of Mormon.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BOM {
     title: String,
     subtitle: String,
@@ -158,14 +158,14 @@ impl Default for VerseReference {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct WitnessTestimony {
     title: String,
     text: String,
     signatures: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Book {
     title: String,
     short_title: Option<String>,
@@ -173,12 +173,12 @@ struct Book {
     chapters: Vec<Chapter>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Chapter {
     verses: Vec<Verse>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Verse {
     text: String,
 }
