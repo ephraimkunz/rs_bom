@@ -37,8 +37,12 @@ pub mod gutenberg {
             lazy_static! {
                 static ref CHAPTER_START: Regex =
                     Regex::new(r"^(\d+\s+)?[A-Za-z]+\s+\d+\nChapter\s+(?P<num>\d+)$").unwrap();
+
+                // Profiling shows that extracting capture groups from this regex is the bottleneck for
+                // parsing, so I've heavily optimized it here, using both information about the shortest book name
+                // and the shortest verse.
                 static ref VERSE: Regex = Regex::new(
-                    r"^(?P<short_title>.+)\s+\d+:\d+\n\s+(?P<num>\d+)\s+(?P<text>[\S\s]+)$"
+                    r"(?s)^(?P<short_title>\d?[\sA-Za-z]{4,})\s+\d{1,2}:\d{1,2}\n\s+(?P<num>\d{1,2})\s+(?P<text>.{17,})$"
                 )
                 .unwrap();
             }
