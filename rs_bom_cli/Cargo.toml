@@ -12,3 +12,4 @@ anyhow = "1.0"
 rand = "0.7"
 rs_bom = { path = "../rs_bom" }
 clap = "2.33"
+bincode = "1.3"

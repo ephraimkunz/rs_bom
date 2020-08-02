@@ -1,9 +1,12 @@
+use anyhow::Result;
 use clap::{value_t, App, AppSettings, Arg, SubCommand};
 use rand::Rng;
 use regex::Regex;
 use rs_bom::{RangeCollection, BOM};
+use std::env;
+use std::fs;
 
-fn main() -> Result<(), anyhow::Error> {
+fn main() -> Result<()> {
     let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -29,7 +32,7 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(SubCommand::with_name("text").about("Output the entire Book of Mormon text"))
         .get_matches();
 
-    let bom = BOM::from_default_parser()?;
+    let bom = get_bom()?;
 
     match matches.subcommand() {
         ("text", _) => {
@@ -68,4 +71,25 @@ fn main() -> Result<(), anyhow::Error> {
     }
 
     Ok(())
+}
+
+fn get_bom() -> Result<BOM> {
+    // Try to de-serialize a cached bincode versions (to avoid re-parsing all the source),
+    // or if that fails fallback to parsing the source.
+    const TEMP_FILE_NAME: &str = "rs_bom_serialized";
+    let mut file_path = env::temp_dir();
+    file_path.push(TEMP_FILE_NAME);
+    println!("{:?}", file_path);
+
+    let bom = match fs::read(&file_path) {
+        Ok(data) => match bincode::deserialize(data.as_slice()) {
+            Err(_) => BOM::from_default_parser(),
+            Ok(bom) => Ok(bom),
+        },
+        _ => BOM::from_default_parser(),
+    }?;
+
+    let out_file = fs::File::create(file_path)?;
+    bincode::serialize_into(out_file, &bom)?;
+    Ok(bom)
 }

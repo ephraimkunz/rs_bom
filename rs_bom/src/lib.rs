@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
 
@@ -23,7 +23,7 @@ pub trait BOMParser {
 }
 
 /// Represents a parsed copy of the Book of Mormon.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BOM {
     title: String,
     subtitle: String,
@@ -158,14 +158,14 @@ impl Default for VerseReference {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct WitnessTestimony {
     title: String,
     text: String,
     signatures: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Book {
     title: String,
     short_title: Option<String>,
@@ -173,12 +173,12 @@ struct Book {
     chapters: Vec<Chapter>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Chapter {
     verses: Vec<Verse>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Verse {
     text: String,
 }
