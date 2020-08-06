@@ -19,10 +19,17 @@
 * Parse arbitrary reference strings using the format specified [here](https://en.wikipedia.org/wiki/Bible_citation). Canonicalize these references and iterate over the verses in them. For example, given a string of `Alma 3:18–19, 16–17; Alma 3; Alma 4` we can canonicalize it to `Alma 3–4`. Similarly, we canonicalize `Alma 16, 18, 19` to `Alma 16, 18–19`.
 
 ### Crate rs_bom_cli
-* CLI app providing rich terminal interface to the Book of Mormon.
+* CLI app providing terminal interface to the Book of Mormon.
+* Get a random verse
+* Search for a reference or for arbitrary text. Limit returned results and get total match count.
+* Output all text for consumption for other command-line utilities such as `grep`.
 
 ### Crate rs_bom_api
-* JSON RESTful API for all functionality exposed by `rs_bom`.
-* Swagger (OpenAPI) documentation built-in.
+* JSON RESTful API
+* Swagger (OpenAPI) documentation
+* Get a specific verse
+* Canonicalize a reference string
+* Get all verses in a reference
+* Get a random verse
 
 
