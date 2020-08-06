@@ -461,11 +461,9 @@ impl str::FromStr for RangeCollection {
                     let (end_of_name_index, book_index) = extract_book_name(book_chapter_chunk)
                         .or_else(|e| {
                             // Use the previous book if it exists.
-                            if let Some(prev) = references.last() {
-                                Ok((0, prev.book_index))
-                            } else {
-                                Err(e)
-                            }
+                            references
+                                .last()
+                                .map_or(Err(e), |prev| Ok((0, prev.book_index)))
                         })?;
 
                     let chapter = extract_number(&book_chapter_chunk[end_of_name_index..])?;

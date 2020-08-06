@@ -109,9 +109,9 @@ fn get_bom(delete_cache: bool) -> Result<BOM> {
                 from_cache = true;
                 Ok(bom)
             }
-            _ => BOM::from_default_parser(),
+            Err(_) => BOM::from_default_parser(),
         },
-        _ => BOM::from_default_parser(),
+        Err(_) => BOM::from_default_parser(),
     }?;
 
     // Create a cache file if we just ended up parsing the corpus.
