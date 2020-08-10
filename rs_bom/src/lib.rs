@@ -226,6 +226,22 @@ mod tests {
     }
 
     #[test]
+    fn display_verse() {
+        let bom = BOM::from_default_parser().unwrap();
+        let reference = VerseReference::new(0, 1, 1);
+        let verse = bom.verse_matching(&reference).unwrap();
+        assert_eq!(
+            verse.to_string(),
+            "1 Nephi 1:1\nI, Nephi, having been born of goodly parents, therefore I was \
+        taught somewhat in all the learning of my father; and having seen \
+        many afflictions in the course of my days, nevertheless, having \
+        been highly favored of the Lord in all my days; yea, having had a \
+        great knowledge of the goodness and the mysteries of God, \
+        therefore I make a record of my proceedings in my days."
+        )
+    }
+
+    #[test]
     fn verses_matching_good_reference_verse_ranges() {
         let bom = BOM::from_default_parser().unwrap();
         let reference = "1 Nephi 3: 3-5".parse::<RangeCollection>();

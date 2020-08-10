@@ -775,5 +775,6 @@ mod tests {
         illegal_11: "1 Nephi 1:1, 1:2",
         illegal_12: "1 Nephi 1:1; 1 Nephi 5: 0", // Should this be illegal? Should any incorrect citations in a list fail the whole list?
         illegal_13: "Ephraim 5",
+        illegal_14: "Alma 5:5-6-",
     }
 }
