@@ -6,7 +6,7 @@
 
 ## Getting Started
 1. Clone the project.
-2. Inside the project directory, run `cargo run --bin rs_bom_cli` to run the command-line app. Run `cargo run --bin rs_bom_api` to start serving the RESTful API. Run `cargo run --bin rs_bom_emailer` to send an email with a random verse. This will need the `USERNAME` and `PASSWORD` environment variables to be specified at build time.
+2. Inside the project directory, run `cargo run --bin rs_bom_cli` to run the command-line app. Run `cargo run --bin rs_bom_api` to start serving the RESTful API. Run `cargo run --bin rs_bom_emailer` to send an email with a random verse.
 3. Run `cargo doc --open` to generate the docs.
 4. Run `cargo test` to run tests.
 5. Run `cargo fuzz run reference` to run the reference parser fuzzer.
@@ -33,4 +33,6 @@
 * Get all verses in a reference
 * Get a random verse
 
-
+### Crate rs_bom_emailer
+* This will need the `USERNAME` and `PASSWORD` environment variables to be specified at build time.
+* The resulting executable can be scheduled to be run as a cronjob with a crontab entry like this: `45 5 * * * ~/rs_bom_emailer`. That will send an email to someone every morning at 5:45 am with a random scripture as the body.
