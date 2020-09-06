@@ -22,7 +22,7 @@ fn main() {
     // Define these at compile time so they'll be inserted into the binary.
     let username = env!("USERNAME").to_string();
     let password = env!("PASSWORD").to_string();
-    
+
     let creds = Credentials::new(username, password);
 
     // Open a remote connection to gmail
