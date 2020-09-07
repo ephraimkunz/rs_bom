@@ -2,10 +2,6 @@ on: [push, pull_request]
 
 name: CI
 
-env:
-  USERNAME: cli_username
-  PASSWORD: cli_password
-
 jobs:
   check:
     name: Check

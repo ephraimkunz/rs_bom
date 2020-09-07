@@ -20,20 +20,22 @@ fn main() {
         .unwrap();
 
     // Define these at compile time so they'll be inserted into the binary.
-    let username = env!("USERNAME").to_string();
-    let password = env!("PASSWORD").to_string();
+    match (option_env!("USERNAME"), option_env!("PASSWORD")) {
+        (Some(username), Some(password)) => {
+            let creds = Credentials::new(username.to_string(), password.to_string());
 
-    let creds = Credentials::new(username, password);
+            // Open a remote connection to gmail
+            let mailer = SmtpTransport::relay("smtp.gmail.com")
+                .expect("Unabled to connect to gmail transport")
+                .credentials(creds)
+                .build();
 
-    // Open a remote connection to gmail
-    let mailer = SmtpTransport::relay("smtp.gmail.com")
-        .expect("Unabled to connect to gmail transport")
-        .credentials(creds)
-        .build();
-
-    // Send the email
-    match mailer.send(&email) {
-        Ok(_) => println!("Email sent successfully!"),
-        Err(e) => panic!("Could not send email: {:?}", e),
+            // Send the email
+            match mailer.send(&email) {
+                Ok(_) => println!("Email sent successfully!"),
+                Err(e) => panic!("Could not send email: {:?}", e),
+            }
+        }
+        _ => panic!("Could not read USERNAME or PASSWORD environment variables"),
     }
 }
