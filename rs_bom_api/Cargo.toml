@@ -19,7 +19,7 @@ serde = {version = "1.0", features = ["derive"]}
 rand = "0.7"
 lazy_static = "1.4"
 rocket_okapi = "0.5"
-schemars = "0.7"
+schemars = "0.8"
 okapi = { version = "0.4", features = ["derive_json_schema"] }
 
 [dependencies.rocket_contrib]
