@@ -6,8 +6,6 @@ use lazy_static::lazy_static;
 use rand::Rng;
 use rocket::response::status;
 use rocket_contrib::json::Json;
-use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
-use rocket_okapi::{openapi, routes_with_openapi, JsonSchema};
 use rs_bom::{RangeCollection, VerseReference, VerseWithReference, BOM};
 use serde::Serialize;
 
@@ -16,14 +14,14 @@ lazy_static! {
         BOM::from_default_parser().expect("Failed to get BOM from defaul parser");
 }
 
-#[derive(Serialize, Debug, JsonSchema)]
+#[derive(Serialize, Debug)]
 struct WebVerseWithReference {
     reference: VerseReference,
     reference_string: String,
     text: String,
 }
 
-#[derive(Serialize, Debug, JsonSchema)]
+#[derive(Serialize, Debug)]
 struct WebParsedReference {
     original_reference: String,
     parsed_reference: String,
@@ -44,7 +42,6 @@ impl<'a> From<VerseWithReference<'a>> for WebVerseWithReference {
     }
 }
 
-#[openapi]
 #[get("/verse/<book>/<chapter>/<verse>")]
 fn single_verse(
     book: usize,
@@ -58,7 +55,6 @@ fn single_verse(
         .ok_or_else(|| status::NotFound(format!("Invalid reference: {:?}", reference)))
 }
 
-#[openapi]
 #[get("/verses/<reference_string>")]
 fn verses(
     reference_string: String,
@@ -73,7 +69,6 @@ fn verses(
     Ok(Json(verses))
 }
 
-#[openapi]
 #[get("/verse/random")]
 fn random_verse() -> Json<WebVerseWithReference> {
     let verses = STATIC_BOM.verses();
@@ -83,7 +78,6 @@ fn random_verse() -> Json<WebVerseWithReference> {
     Json(random_verse.into())
 }
 
-#[openapi]
 #[get("/canonicalize/<reference_string>")]
 fn canonicalize(
     reference_string: String,
@@ -108,14 +102,7 @@ fn main() {
     rocket::ignite()
         .mount(
             "/",
-            routes_with_openapi![single_verse, verses, random_verse, canonicalize],
-        )
-        .mount(
-            "/",
-            make_swagger_ui(&SwaggerUIConfig {
-                url: "/openapi.json".to_owned(),
-                ..SwaggerUIConfig::default()
-            }),
+            routes![single_verse, verses, random_verse, canonicalize],
         )
         .register(catchers![not_found])
         .launch();

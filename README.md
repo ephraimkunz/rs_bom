@@ -27,7 +27,6 @@
 
 ### Crate rs_bom_api
 * JSON RESTful API
-* Swagger (OpenAPI) documentation
 * Get a specific verse
 * Canonicalize a reference string
 * Get all verses in a reference
