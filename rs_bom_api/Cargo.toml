@@ -14,12 +14,14 @@ edition = "2018"
 
 [dependencies]
 rs_bom = { path = "../rs_bom" }
-rocket = "0.4"
+rocket = { version = "0.5.0-dev", default-features = false, git = "https://github.com/SergioBenitez/Rocket", branch = "master" }
 serde = {version = "1.0", features = ["derive"]}
 rand = "0.7"
 lazy_static = "1.4"
 
 [dependencies.rocket_contrib]
-version = "0.4"
+version = "0.5.0-dev"
+git = "https://github.com/SergioBenitez/Rocket"
+branch = "master"
 default-features = false
 features = ["json"]

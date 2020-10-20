@@ -1,4 +1,3 @@
-#![feature(proc_macro_hygiene, decl_macro)]
 #[macro_use]
 extern crate rocket;
 
@@ -98,12 +97,12 @@ fn not_found() -> String {
     String::from("The requested resource could not be found.")
 }
 
-fn main() {
+#[launch]
+fn rocket() -> rocket::Rocket {
     rocket::ignite()
         .mount(
             "/",
             routes![single_verse, verses, random_verse, canonicalize],
         )
         .register(catchers![not_found])
-        .launch();
 }
