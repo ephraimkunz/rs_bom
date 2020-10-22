@@ -81,12 +81,6 @@ checksum = "1b20b618342cf9891c292c4f5ac2cde7287cc5c87e87e9c769d617793607dec1"
 
 [[package]]
 name = "base64"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
-
-[[package]]
-name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
@@ -642,7 +636,7 @@ version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2adce67e2c21cd95288ae3d9f2bbb2762cf17c03744628d49679f315ed1e2e58"
 dependencies = [
- "base64 0.13.0",
+ "base64",
  "bytes",
  "http",
  "httparse",
@@ -747,11 +741,11 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "lettre"
-version = "0.10.0-alpha.2"
+version = "0.10.0-alpha.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ef0e6a22631e37078148cff6ce1ef92984bdc2fbd2cb2cc804836db8196cc57"
+checksum = "e422b6c03563bc47db09bb61a8ece4f1462de131455beb96c091e2998fa316a2"
 dependencies = [
- "base64 0.12.3",
+ "base64",
  "hostname",
  "hyperx",
  "idna",
