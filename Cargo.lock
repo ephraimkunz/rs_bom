@@ -210,7 +210,7 @@ checksum = "ce90df4c658c62f12d78f7508cf92f9173e5184a539c10bfe54a3107b3ffd0f2"
 [[package]]
 name = "cookie"
 version = "0.15.0-dev"
-source = "git+https://github.com/SergioBenitez/cookie-rs.git?rev=9675944#96759448004cc9bdb76a58cfacee815da5617f8b"
+source = "git+https://github.com/SergioBenitez/cookie-rs.git?rev=1c3ca83#1c3ca838543b60a4448d279dc4b903cc7a2bc22a"
 dependencies = [
  "percent-encoding",
  "time 0.2.22",
@@ -363,7 +363,7 @@ source = "git+https://github.com/SergioBenitez/Devise.git?rev=3648468#3648468a9e
 dependencies = [
  "bitflags",
  "proc-macro2",
- "proc-macro2-diagnostics 0.9.0",
+ "proc-macro2-diagnostics",
  "quote",
  "syn",
 ]
@@ -379,6 +379,19 @@ name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
+name = "figment"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eede085e552099a1058b158c0a41d8024ea4d5772d465049657d7d2b053e471"
+dependencies = [
+ "pear",
+ "serde",
+ "toml",
+ "uncased",
+ "version_check",
+]
 
 [[package]]
 name = "fnv"
@@ -630,6 +643,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project",
+ "socket2",
  "tokio",
  "tower-service",
  "tracing",
@@ -1028,8 +1042,9 @@ dependencies = [
 
 [[package]]
 name = "pear"
-version = "0.2.0-dev"
-source = "git+https://github.com/SergioBenitez/Pear.git?rev=4b68055#4b680556063568a42fcd4328335cdfdf7608be49"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09f612cbd0f9dd03f5dd28a191c48e4148c3b027e41207b32eee130373c6c941"
 dependencies = [
  "inlinable_string",
  "pear_codegen",
@@ -1038,11 +1053,12 @@ dependencies = [
 
 [[package]]
 name = "pear_codegen"
-version = "0.2.0-dev"
-source = "git+https://github.com/SergioBenitez/Pear.git?rev=4b68055#4b680556063568a42fcd4328335cdfdf7608be49"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "602cf1780ee9bbca663ea75769e05643e16fe87d7c8ac9f4f385a2ed8940a75c"
 dependencies = [
  "proc-macro2",
- "proc-macro2-diagnostics 0.1.0",
+ "proc-macro2-diagnostics",
  "quote",
  "syn",
 ]
@@ -1128,18 +1144,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e0704ee1a7e00d7bb417d0770ea303c1bccbabf0ef1667dae92b5967f5f8a71"
 dependencies = [
  "unicode-xid",
-]
-
-[[package]]
-name = "proc-macro2-diagnostics"
-version = "0.1.0"
-source = "git+https://github.com/SergioBenitez/proc-macro2-diagnostics.git?rev=13fbb43#13fbb43db72034b6f9660a9b00e338cebd8dcf44"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
- "version_check",
- "yansi",
 ]
 
 [[package]]
@@ -1312,25 +1316,27 @@ dependencies = [
 [[package]]
 name = "rocket"
 version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?branch=master#8da034ab835ef1d599cd146164dffda960275c06"
+source = "git+https://github.com/SergioBenitez/Rocket?branch=master#198b6f0e9726f7e53c61d365b797df630c876c59"
 dependencies = [
  "async-trait",
  "atomic",
  "atty",
  "binascii",
+ "either",
+ "figment",
  "futures",
  "log",
  "memchr",
  "num_cpus",
  "parking_lot",
- "pear",
+ "rand",
  "ref-cast",
  "rocket_codegen",
  "rocket_http",
+ "serde",
  "state",
  "time 0.2.22",
  "tokio",
- "toml",
  "ubyte",
  "version_check",
  "yansi",
@@ -1339,7 +1345,7 @@ dependencies = [
 [[package]]
 name = "rocket_codegen"
 version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?branch=master#8da034ab835ef1d599cd146164dffda960275c06"
+source = "git+https://github.com/SergioBenitez/Rocket?branch=master#198b6f0e9726f7e53c61d365b797df630c876c59"
 dependencies = [
  "devise",
  "glob",
@@ -1351,7 +1357,7 @@ dependencies = [
 [[package]]
 name = "rocket_contrib"
 version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?branch=master#8da034ab835ef1d599cd146164dffda960275c06"
+source = "git+https://github.com/SergioBenitez/Rocket?branch=master#198b6f0e9726f7e53c61d365b797df630c876c59"
 dependencies = [
  "log",
  "rocket",
@@ -1363,7 +1369,7 @@ dependencies = [
 [[package]]
 name = "rocket_http"
 version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?branch=master#8da034ab835ef1d599cd146164dffda960275c06"
+source = "git+https://github.com/SergioBenitez/Rocket?branch=master#198b6f0e9726f7e53c61d365b797df630c876c59"
 dependencies = [
  "cookie",
  "either",
@@ -1585,6 +1591,18 @@ name = "smallvec"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbee7696b84bbf3d89a1c2eccff0850e3047ed46bfcd2e92c29a2d074d57e252"
+
+[[package]]
+name = "socket2"
+version = "0.3.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1fa70dc5c8104ec096f4fe7ede7a221d35ae13dcd19ba1ad9a81d2cab9a1c44"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "redox_syscall",
+ "winapi 0.3.9",
+]
 
 [[package]]
 name = "standback"
@@ -1885,6 +1903,9 @@ name = "ubyte"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8576ece1c74e91210e2ec01e016f2fb68037f8274e2e80dee775ca2fbf8a8479"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "uncased"
