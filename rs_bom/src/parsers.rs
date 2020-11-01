@@ -1,7 +1,7 @@
 /// Parser for the [Gutenberg English BOM](http://www.gutenberg.org/ebooks/17) text.
 pub mod gutenberg {
     use crate::{BOMParser, Book, Chapter, Verse, WitnessTestimony, BOM};
-    use lazy_static::lazy_static;
+    use once_cell::sync::Lazy;
     use regex::Regex;
     use std::{borrow::Cow, fs, io, path};
     use thiserror::Error;
@@ -34,18 +34,17 @@ pub mod gutenberg {
 
     impl ChunkType {
         fn new(s: &str) -> Self {
-            lazy_static! {
-                static ref CHAPTER_START: Regex =
-                    Regex::new(r"^(\d+\s+)?[A-Za-z]+\s+\d+\nChapter\s+(?P<num>\d+)$").unwrap();
+            static CHAPTER_START: Lazy<Regex> = Lazy::new(|| {
+                Regex::new(r"^(\d+\s+)?[A-Za-z]+\s+\d+\nChapter\s+(?P<num>\d+)$").unwrap()
+            });
 
-                // Profiling shows that extracting capture groups from this regex is the bottleneck for
-                // parsing, so I've heavily optimized it here, using both information about the shortest book name
-                // and the shortest verse.
-                static ref VERSE: Regex = Regex::new(
-                    r"(?s)^(?P<short_title>\d?[\sA-Za-z]{4,})\s+\d{1,2}:\d{1,2}\n\s+(?P<num>\d{1,2})\s+(?P<text>.{17,})$"
-                )
-                .unwrap();
-            }
+            // Profiling shows that extracting capture groups from this regex is the bottleneck for
+            // parsing, so I've heavily optimized it here, using both information about the shortest book name
+            // and the shortest verse.
+            static VERSE: Lazy<Regex> = Lazy::new(|| {
+                Regex::new(r"(?s)^(?P<short_title>\d?[\sA-Za-z]{4,})\s+\d{1,2}:\d{1,2}\n\s+(?P<num>\d{1,2})\s+(?P<text>.{17,})$")
+                .unwrap()
+            });
 
             match s {
                 _ if s.lines().count() == 1 && s.to_uppercase() == s => Self::BookTitle,

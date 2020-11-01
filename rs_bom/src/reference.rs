@@ -1,7 +1,7 @@
 use crate::{BOMError, VerseReference, BOM};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
-use std::{cmp, collections::HashMap, fmt, str};
+use std::{cmp, fmt, str};
 
 const CITATION_DELIM: char = ';';
 const VERSE_CHUNK_DELIM: char = ',';
@@ -10,54 +10,123 @@ const RANGE_DELIM_CANONICAL: char = '–'; // en-dash
 const RANGE_DELIM_NON_CANONICAL1: char = '-'; // regular dash
 const RANGE_DELIM_NON_CANONICAL2: char = '—'; // em-dash
 
-lazy_static! {
-    static ref BOOK_NAMES_TO_INDEX: HashMap<&'static str, usize> = vec![
-        ("1 Nephi", 0),
-        ("1 Ne.", 0),
-        ("2 Nephi", 1),
-        ("2 Ne.", 1),
-        ("Jacob", 2),
-        ("Enos", 3),
-        ("Jarom", 4),
-        ("Omni", 5),
-        ("Words of Mormon", 6),
-        ("W of M", 6),
-        ("Mosiah", 7),
-        ("Alma", 8),
-        ("Helaman", 9),
-        ("Hel.", 9),
-        ("3 Nephi", 10),
-        ("3 Ne.", 10),
-        ("4 Nephi", 11),
-        ("4 Ne.", 11),
-        ("Mormon", 12),
-        ("Morm.", 12),
-        ("Ether", 13),
-        ("Moroni", 14),
-        ("Moro.", 14),
-    ]
-    .into_iter()
-    .collect();
-
-    static ref BOOK_INDEX_TO_NAMES: Vec<(&'static str, &'static str)> = vec![
-        // (Long name, short name)
-        ("1 Nephi", "1 Ne."),
-        ("2 Nephi", "2 Ne."),
-        ("Jacob", "Jacob"),
-        ("Enos", "Enos"),
-        ("Jarom", "Jarom"),
-        ("Omni", "Omni"),
-        ("Words of Mormon", "W of M"),
-        ("Mosiah", "Mosiah"),
-        ("Alma", "Alma"),
-        ("Helaman", "Hel."),
-        ("3 Nephi", "3 Ne."),
-        ("4 Nephi", "4 Ne."),
-        ("Mormon", "Morm."),
-        ("Ether", "Ether"),
-        ("Moroni", "Moro."),
-    ];
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum Work {
+    OldTestament,
+    NewTestament,
+    BookOfMormon,
 }
+struct BookData {
+    work: Work,
+    long_name: &'static str,
+    short_name: &'static str,
+    book_index: usize,
+}
+
+impl BookData {
+    fn new(
+        work: Work,
+        long_name: &'static str,
+        short_name: &'static str,
+        book_index: usize,
+    ) -> BookData {
+        BookData {
+            work,
+            long_name,
+            short_name,
+            book_index,
+        }
+    }
+}
+
+static BOOK_DATA: Lazy<Vec<BookData>> = Lazy::new(|| {
+    vec![
+        // Old Testament
+        BookData::new(Work::OldTestament, "Genesis", "Gen.", 0),
+        BookData::new(Work::OldTestament, "Exodus", "Ex.", 1),
+        BookData::new(Work::OldTestament, "Leviticus", "Lev.", 2),
+        BookData::new(Work::OldTestament, "Numbers", "Num.", 3),
+        BookData::new(Work::OldTestament, "Deuteronomy", "Deut.", 4),
+        BookData::new(Work::OldTestament, "Joshua", "Josh.", 5),
+        BookData::new(Work::OldTestament, "Judges", "Judg.", 6),
+        BookData::new(Work::OldTestament, "Ruth", "Ruth", 7),
+        BookData::new(Work::OldTestament, "1 Samuel", "1 Sam.", 8),
+        BookData::new(Work::OldTestament, "2 Samuel", "2 Sam.", 9),
+        BookData::new(Work::OldTestament, "1 Kings", "1 Kgs.", 10),
+        BookData::new(Work::OldTestament, "2 Kings", "2 Kgs.", 11),
+        BookData::new(Work::OldTestament, "1 Chronicles", "1 Chron.", 12),
+        BookData::new(Work::OldTestament, "2 Chronicles", "2 Chron.", 13),
+        BookData::new(Work::OldTestament, "Ezra", "Ezra", 14),
+        BookData::new(Work::OldTestament, "Nehemiah", "Neh.", 15),
+        BookData::new(Work::OldTestament, "Esther", "Esth.", 16),
+        BookData::new(Work::OldTestament, "Job", "Job", 17),
+        BookData::new(Work::OldTestament, "Psalms", "Ps.", 18),
+        BookData::new(Work::OldTestament, "Proverbs", "Prov.", 19),
+        BookData::new(Work::OldTestament, "Ecclesiastes", "Eccl.", 20),
+        BookData::new(Work::OldTestament, "Song of Solomon", "Song.", 21),
+        BookData::new(Work::OldTestament, "Isaiah", "Isa.", 22),
+        BookData::new(Work::OldTestament, "Jeremiah", "Jer.", 23),
+        BookData::new(Work::OldTestament, "Lamentations", "Lam.", 24),
+        BookData::new(Work::OldTestament, "Ezekiel", "Ezek.", 25),
+        BookData::new(Work::OldTestament, "Daniel", "Dan.", 26),
+        BookData::new(Work::OldTestament, "Hosea", "Hosea", 27),
+        BookData::new(Work::OldTestament, "Joel", "Joel", 28),
+        BookData::new(Work::OldTestament, "Amos", "Amos", 29),
+        BookData::new(Work::OldTestament, "Obadiah", "Obad.", 30),
+        BookData::new(Work::OldTestament, "Jonah", "Jonah", 31),
+        BookData::new(Work::OldTestament, "Micah", "Micah", 32),
+        BookData::new(Work::OldTestament, "Nahum", "Nahum", 33),
+        BookData::new(Work::OldTestament, "Habakkuk", "Hab.", 34),
+        BookData::new(Work::OldTestament, "Zephaniah", "Zeph.", 35),
+        BookData::new(Work::OldTestament, "Haggai", "Hag.", 36),
+        BookData::new(Work::OldTestament, "Zechariah", "Zech.", 37),
+        BookData::new(Work::OldTestament, "Malachi", "Mal.", 38),
+        // New Testament
+        BookData::new(Work::NewTestament, "Matthew", "Matt.", 0),
+        BookData::new(Work::NewTestament, "Mark", "Mark", 1),
+        BookData::new(Work::NewTestament, "Luke", "Luke", 2),
+        BookData::new(Work::NewTestament, "John", "John", 3),
+        BookData::new(Work::NewTestament, "Acts", "Acts", 4),
+        BookData::new(Work::NewTestament, "Romans", "Rom.", 5),
+        BookData::new(Work::NewTestament, "1 Corinthians", "1 Cor.", 6),
+        BookData::new(Work::NewTestament, "2 Corinthians", "2 Cor.", 7),
+        BookData::new(Work::NewTestament, "Galatians", "Gal.", 8),
+        BookData::new(Work::NewTestament, "Ephesians", "Eph.", 9),
+        BookData::new(Work::NewTestament, "Philippians", "Philip.", 10),
+        BookData::new(Work::NewTestament, "Colossians", "Col.", 11),
+        BookData::new(Work::NewTestament, "1 Thessalonians", "1 Thes.", 12),
+        BookData::new(Work::NewTestament, "2 Thessalonians", "2 Thes.", 13),
+        BookData::new(Work::NewTestament, "1 Timothy", "1 Tim.", 14),
+        BookData::new(Work::NewTestament, "2 Timothy", "2 Tim.", 15),
+        BookData::new(Work::NewTestament, "Titus", "Titus", 16),
+        BookData::new(Work::NewTestament, "Philemon", "Philem.", 17),
+        BookData::new(Work::NewTestament, "Hebrews", "Heb.", 18),
+        BookData::new(Work::NewTestament, "James", "James", 19),
+        BookData::new(Work::NewTestament, "1 Peter", "1 Pet.", 20),
+        BookData::new(Work::NewTestament, "2 Peter", "2 Pet.", 21),
+        BookData::new(Work::NewTestament, "1 John", "1 Jn.", 22),
+        BookData::new(Work::NewTestament, "2 John", "2 Jn.", 23),
+        BookData::new(Work::NewTestament, "3 John", "3 Jn.", 24),
+        BookData::new(Work::NewTestament, "Jude", "Jude", 25),
+        BookData::new(Work::NewTestament, "Revelation", "Rev.", 26),
+        // Book of Mormon
+        BookData::new(Work::BookOfMormon, "1 Nephi", "1 Ne.", 0),
+        BookData::new(Work::BookOfMormon, "2 Nephi", "2 Ne.", 1),
+        BookData::new(Work::BookOfMormon, "Jacob", "Jacob", 2),
+        BookData::new(Work::BookOfMormon, "Enos", "Enos", 3),
+        BookData::new(Work::BookOfMormon, "Jarom", "Jarom", 4),
+        BookData::new(Work::BookOfMormon, "Omni", "Omni", 5),
+        BookData::new(Work::BookOfMormon, "Words of Mormon", "W of M", 6),
+        BookData::new(Work::BookOfMormon, "Mosiah", "Mosiah", 7),
+        BookData::new(Work::BookOfMormon, "Alma", "Alma", 8),
+        BookData::new(Work::BookOfMormon, "Helaman", "Hel.", 9),
+        BookData::new(Work::BookOfMormon, "3 Nephi", "3 Ne.", 10),
+        BookData::new(Work::BookOfMormon, "4 Nephi", "4 Ne.", 11),
+        BookData::new(Work::BookOfMormon, "Mormon", "Morm.", 12),
+        BookData::new(Work::BookOfMormon, "Ether", "Ether", 13),
+        BookData::new(Work::BookOfMormon, "Moroni", "Moro.", 14),
+    ]
+});
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 enum RangeType {
@@ -144,6 +213,7 @@ impl Ord for RangeType {
 struct VerseRangeReference {
     range_type: RangeType,
     book_index: usize,
+    work: Work,
 }
 
 impl PartialOrd for VerseRangeReference {
@@ -319,6 +389,7 @@ impl RangeCollection {
         // Collapse ranges
         let mut current_ref = self.refs[0].clone();
         let mut current_book = current_ref.book_index;
+        let mut current_work = current_ref.work;
         let mut current_chap_range = current_ref.range_type.chapter_range();
         let mut current_verse_range = current_ref.range_type.verse_range();
         new_refs.push(current_ref);
@@ -327,10 +398,11 @@ impl RangeCollection {
             let chap_range = r.range_type.chapter_range();
             let verse_range = r.range_type.verse_range();
 
+            let in_same_work = r.work == current_work;
             let in_same_book = r.book_index == current_book;
             let overlapping_chapter_ranges =
                 chap_range.0 >= current_chap_range.0 && chap_range.0 <= (current_chap_range.1 + 1);
-            let is_collapsible = in_same_book && overlapping_chapter_ranges;
+            let is_collapsible = in_same_work && in_same_book && overlapping_chapter_ranges;
             if is_collapsible {
                 match (verse_range, current_verse_range) {
                     (None, None) => {
@@ -344,10 +416,12 @@ impl RangeCollection {
                                     start: min_chap,
                                     end: max_chap,
                                 },
+                                work: current_work,
                             };
 
                             current_ref = combined_ref.clone();
                             current_book = current_ref.book_index;
+                            current_work = current_ref.work;
                             current_chap_range = current_ref.range_type.chapter_range();
                             current_verse_range = current_ref.range_type.verse_range();
 
@@ -369,10 +443,12 @@ impl RangeCollection {
                                     end: max_verse,
                                     chapter: current_chap_range.0, // We can use any of the chapter ranges, arbitrary choice since all the same.
                                 },
+                                work: current_work,
                             };
 
                             current_ref = combined_ref.clone();
                             current_book = current_ref.book_index;
+                            current_work = current_ref.work;
                             current_chap_range = current_ref.range_type.chapter_range();
                             current_verse_range = current_ref.range_type.verse_range();
 
@@ -392,10 +468,12 @@ impl RangeCollection {
                                     start: chap_range.0,
                                     end: chap_range.1,
                                 },
+                                work: current_work,
                             };
 
                             current_ref = combined_ref.clone();
                             current_book = current_ref.book_index;
+                            current_work = current_ref.work;
                             current_chap_range = current_ref.range_type.chapter_range();
                             current_verse_range = current_ref.range_type.verse_range();
 
@@ -412,11 +490,11 @@ impl RangeCollection {
             // Nothing to collapse, just add the reference.
             current_ref = r.clone();
             current_book = current_ref.book_index;
+            current_work = current_ref.work;
             current_chap_range = current_ref.range_type.chapter_range();
             current_verse_range = current_ref.range_type.verse_range();
             new_refs.push(r.clone());
         }
-
         self.refs = new_refs;
     }
 }
@@ -442,7 +520,7 @@ impl str::FromStr for RangeCollection {
                     // Everything should be treated as a chapter.
                     let chapter_chunk_split: Vec<_> = citation.split(VERSE_CHUNK_DELIM).collect();
                     let first_chunk = chapter_chunk_split[0];
-                    let (end_of_name_index, book_index) = extract_book_name(first_chunk)?;
+                    let (end_of_name_index, book_index, work) = extract_book_name(first_chunk)?;
                     let mut chapter_chunks = vec![&first_chunk[end_of_name_index..]];
                     chapter_chunks.extend(&chapter_chunk_split[1..]);
 
@@ -451,6 +529,7 @@ impl str::FromStr for RangeCollection {
                         let reference = VerseRangeReference {
                             book_index,
                             range_type: RangeType::StartEndChapter { start, end },
+                            work,
                         };
                         references.push(reference);
                     }
@@ -458,12 +537,12 @@ impl str::FromStr for RangeCollection {
                 2 => {
                     // First is the chapter, everything else is the verse.
                     let book_chapter_chunk = chapter_verse_split[0];
-                    let (end_of_name_index, book_index) = extract_book_name(book_chapter_chunk)
-                        .or_else(|e| {
+                    let (end_of_name_index, book_index, work) =
+                        extract_book_name(book_chapter_chunk).or_else(|e| {
                             // Use the previous book if it exists.
                             references
                                 .last()
-                                .map_or(Err(e), |prev| Ok((0, prev.book_index)))
+                                .map_or(Err(e), |prev| Ok((0, prev.book_index, prev.work)))
                         })?;
 
                     let chapter = extract_number(&book_chapter_chunk[end_of_name_index..])?;
@@ -479,6 +558,7 @@ impl str::FromStr for RangeCollection {
                                 start,
                                 end,
                             },
+                            work,
                         };
                         references.push(reference);
                     }
@@ -532,11 +612,15 @@ fn extract_range(s: &str) -> Result<(usize, usize), BOMError> {
     }
 }
 
-fn extract_book_name(s: &str) -> Result<(usize, usize), BOMError> {
-    lazy_static! {
-        static ref POSSIBLE_BOOK_NAME: Regex =
-            Regex::new(r"^(?P<name>(\d\s)?[A-Za-z ]+\.?)\s+").unwrap();
-    }
+fn book_data_from_candidate_title(candidate: &str) -> Option<&BookData> {
+    BOOK_DATA
+        .iter()
+        .find(|d| d.long_name == candidate || d.short_name == candidate)
+}
+
+fn extract_book_name(s: &str) -> Result<(usize, usize, Work), BOMError> {
+    static POSSIBLE_BOOK_NAME: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"^(?P<name>(\d\s)?[A-Za-z ]+\.?)\s+").unwrap());
 
     let s_trimmed = s.trim();
     if POSSIBLE_BOOK_NAME.is_match(s_trimmed) {
@@ -545,12 +629,9 @@ fn extract_book_name(s: &str) -> Result<(usize, usize), BOMError> {
         })?;
         let cap = caps["name"].trim();
         let trimmed = cap.trim();
-        if BOOK_NAMES_TO_INDEX.contains_key(trimmed) {
+        if let Some(book_data) = book_data_from_candidate_title(trimmed) {
             let index = s.find(trimmed).unwrap(); // We just found it via regex.
-            return Ok((
-                index + trimmed.len(),
-                *BOOK_NAMES_TO_INDEX.get(trimmed).unwrap(),
-            ));
+            return Ok((index + trimmed.len(), book_data.book_index, book_data.work));
         }
     }
 
@@ -575,21 +656,30 @@ impl fmt::Display for RangeCollection {
         // Use values guaranteed to not be the first.
         let mut previous_book = 1000;
         let mut previous_chapter = 1000;
+        let mut previous_work: Option<Work> = None;
 
         for (i, reference) in self.refs.iter().enumerate() {
             let new_book = previous_book != reference.book_index;
-            if new_book {
+            let new_work = previous_work.is_none() || previous_work.unwrap() != reference.work;
+            let new_book_title = new_book || new_work;
+            if new_book_title {
                 if i != 0 {
                     write!(f, "{} ", CITATION_DELIM)?;
                 }
 
-                write!(f, "{} ", BOOK_INDEX_TO_NAMES[reference.book_index].1)?;
+                // This has previously been validated to be a real index, so we can unwrap here.
+                let book_data = BOOK_DATA
+                    .iter()
+                    .find(|d| d.work == reference.work && d.book_index == reference.book_index)
+                    .unwrap();
+                write!(f, "{} ", book_data.short_name)?;
                 previous_book = reference.book_index;
+                previous_work = Some(reference.work);
             }
 
             match reference.range_type {
                 RangeType::StartEndChapter { start, end } => {
-                    if !new_book {
+                    if !new_book_title {
                         write!(f, "{} ", VERSE_CHUNK_DELIM)?
                     }
 
@@ -604,10 +694,10 @@ impl fmt::Display for RangeCollection {
                     start,
                     end,
                 } => {
-                    if !new_book && chapter == previous_chapter {
+                    if !new_book_title && chapter == previous_chapter {
                         write!(f, "{} ", VERSE_CHUNK_DELIM)?
                     } else {
-                        if !new_book && i != 0 {
+                        if !new_book_title && i != 0 {
                             write!(f, "{} ", CITATION_DELIM)?;
                         }
 
@@ -673,6 +763,19 @@ mod tests {
         roundtrip_19: "4 Ne. 1:1",
         roundtrip_20: "Morm. 1:1",
         roundtrip_22: "Moro. 1:1",
+
+    }
+
+    roundtrip_tests! {
+        // From https://en.wikipedia.org/wiki/Bible_citation wikipedia page
+        roundtrip_bible_0: "John 3",
+        roundtrip_bible_1: "John 1–3",
+        roundtrip_bible_2: "John 3:16",
+        roundtrip_bible_3: "John 3:16–17",
+        roundtrip_bible_4: "John 6:14, 44",
+
+        // Others
+        roundtrip_bible_5: "Gen. 6:14",
     }
 
     #[test]
@@ -693,6 +796,8 @@ mod tests {
             ("Alma 3:16, 17, 18–19", "Alma 3:16–19"),
             ("Alma 3:16, 18, 19", "Alma 3:16, 18–19"),
             ("Alma 16, 18, 19", "Alma 16, 18–19"),
+            ("1 Nephi 1; 2 Nephi 1", "1 Ne. 1; 2 Ne. 1"),
+            ("Genesis 1; 1 Nephi 1", "Gen. 1; 1 Ne. 1"), // Make sure that same chapter index across different works is not joined.
             // Convert to en-dashes
             ("Alma 3:16-17", "Alma 3:16–17"),
             ("Alma 3:16—17", "Alma 3:16–17"),
