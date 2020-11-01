@@ -667,7 +667,8 @@ impl fmt::Display for RangeCollection {
                     write!(f, "{} ", CITATION_DELIM)?;
                 }
 
-                // This has previously been validated to be a real index, so we can unwrap here.
+                // It should be impossible to create a RangeCollection with an invalid book index (since it would 
+                // have failed to parse the string), so we can be sure it's legitimate at this point.
                 let book_data = BOOK_DATA
                     .iter()
                     .find(|d| d.work == reference.work && d.book_index == reference.book_index)
