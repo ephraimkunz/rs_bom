@@ -667,7 +667,7 @@ impl fmt::Display for RangeCollection {
                     write!(f, "{} ", CITATION_DELIM)?;
                 }
 
-                // It should be impossible to create a RangeCollection with an invalid book index (since it would 
+                // It should be impossible to create a RangeCollection with an invalid book index (since it would
                 // have failed to parse the string), so we can be sure it's legitimate at this point.
                 let book_data = BOOK_DATA
                     .iter()
