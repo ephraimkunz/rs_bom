@@ -698,9 +698,9 @@ dependencies = [
 
 [[package]]
 name = "inlinable_string"
-version = "0.1.12"
+version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd0ede27dc0fc23c80f0b37c2c15bb2aea97b1070bd0f54155bf586c8db6dee5"
+checksum = "d0180dffe08637edc064c281919b6f92232477bdf1cd26101e072f613dacfedc"
 
 [[package]]
 name = "instant"
