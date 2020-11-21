@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use rand::Rng;
 use rocket::response::status;
 use rocket_contrib::json::Json;
-use rs_bom::{RangeCollection, VerseReference, VerseWithReference, BOM};
+use rs_bom::{RangeCollection, VerseReference, VerseWithReference, Work, BOM};
 use serde::Serialize;
 
 lazy_static! {
@@ -47,7 +47,7 @@ fn single_verse(
     chapter: usize,
     verse: usize,
 ) -> Result<Json<WebVerseWithReference>, status::NotFound<String>> {
-    let reference = VerseReference::new(book, chapter, verse);
+    let reference = VerseReference::new(Work::BookOfMormon, book, chapter, verse);
     STATIC_BOM
         .verse_matching(&reference)
         .map(|v| Json(v.into()))

@@ -1,6 +1,7 @@
-use crate::{BOMError, VerseReference, BOM};
+use crate::{BOMError, BOM};
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Serialize;
 use std::{cmp, fmt, str};
 
 const CITATION_DELIM: char = ';';
@@ -10,16 +11,77 @@ const RANGE_DELIM_CANONICAL: char = '–'; // en-dash
 const RANGE_DELIM_NON_CANONICAL1: char = '-'; // regular dash
 const RANGE_DELIM_NON_CANONICAL2: char = '—'; // em-dash
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Work {
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize)]
+pub enum Work {
     OldTestament,
     NewTestament,
     BookOfMormon,
 }
+
+impl Work {
+    fn url_name(&self) -> &'static str {
+        match self {
+            Self::OldTestament => "ot",
+            Self::NewTestament => "nt",
+            Self::BookOfMormon => "bofm",
+        }
+    }
+}
+
+/// Everything needed to uniquely identify a single verse in a work of scripture.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct VerseReference {
+    pub(super) work: Work,
+    pub(super) book_index: usize,    // 0-based
+    pub(super) chapter_index: usize, // 1-based
+    pub(super) verse_index: usize,   // 1-based, None == whole chapter
+}
+
+impl VerseReference {
+    /// Create a verse reference from parts.
+    /// # Arguments
+    /// * `work`: Work enum
+    /// * `book_index`: 0 indexed, 0 = 1 Nephi, etc.
+    /// * `chapter_index`: 1-indexed
+    /// * `verse_index`: 1-indexed
+    #[must_use]
+    pub const fn new(
+        work: Work,
+        book_index: usize,
+        chapter_index: usize,
+        verse_index: usize,
+    ) -> Self {
+        Self {
+            work,
+            book_index,
+            chapter_index,
+            verse_index,
+        }
+    }
+
+    pub fn is_valid(&self, bom: &BOM) -> bool {
+        if self.chapter_index == 0 || self.verse_index == 0 {
+            return false;
+        }
+
+        bom.books
+            .get(self.book_index)
+            .and_then(|b| b.chapters.get(self.chapter_index - 1))
+            .and_then(|c| c.verses.get(self.verse_index - 1))
+            .is_some()
+    }
+
+    pub fn url(&self) -> Option<String> {
+        let range_collection = RangeCollection::from_verse_ref(self);
+        range_collection.url()
+    }
+}
+
 struct BookData {
     work: Work,
     long_name: &'static str,
     short_name: &'static str,
+    url_name: &'static str,
     book_index: usize,
 }
 
@@ -28,103 +90,106 @@ impl BookData {
         work: Work,
         long_name: &'static str,
         short_name: &'static str,
+        url_name: &'static str,
         book_index: usize,
     ) -> BookData {
         BookData {
             work,
             long_name,
             short_name,
+            url_name,
             book_index,
         }
     }
 }
 
 static BOOK_DATA: Lazy<Vec<BookData>> = Lazy::new(|| {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     vec![
         // Old Testament
-        BookData::new(Work::OldTestament, "Genesis", "Gen.", 0),
-        BookData::new(Work::OldTestament, "Exodus", "Ex.", 1),
-        BookData::new(Work::OldTestament, "Leviticus", "Lev.", 2),
-        BookData::new(Work::OldTestament, "Numbers", "Num.", 3),
-        BookData::new(Work::OldTestament, "Deuteronomy", "Deut.", 4),
-        BookData::new(Work::OldTestament, "Joshua", "Josh.", 5),
-        BookData::new(Work::OldTestament, "Judges", "Judg.", 6),
-        BookData::new(Work::OldTestament, "Ruth", "Ruth", 7),
-        BookData::new(Work::OldTestament, "1 Samuel", "1 Sam.", 8),
-        BookData::new(Work::OldTestament, "2 Samuel", "2 Sam.", 9),
-        BookData::new(Work::OldTestament, "1 Kings", "1 Kgs.", 10),
-        BookData::new(Work::OldTestament, "2 Kings", "2 Kgs.", 11),
-        BookData::new(Work::OldTestament, "1 Chronicles", "1 Chron.", 12),
-        BookData::new(Work::OldTestament, "2 Chronicles", "2 Chron.", 13),
-        BookData::new(Work::OldTestament, "Ezra", "Ezra", 14),
-        BookData::new(Work::OldTestament, "Nehemiah", "Neh.", 15),
-        BookData::new(Work::OldTestament, "Esther", "Esth.", 16),
-        BookData::new(Work::OldTestament, "Job", "Job", 17),
-        BookData::new(Work::OldTestament, "Psalms", "Ps.", 18),
-        BookData::new(Work::OldTestament, "Proverbs", "Prov.", 19),
-        BookData::new(Work::OldTestament, "Ecclesiastes", "Eccl.", 20),
-        BookData::new(Work::OldTestament, "Song of Solomon", "Song.", 21),
-        BookData::new(Work::OldTestament, "Isaiah", "Isa.", 22),
-        BookData::new(Work::OldTestament, "Jeremiah", "Jer.", 23),
-        BookData::new(Work::OldTestament, "Lamentations", "Lam.", 24),
-        BookData::new(Work::OldTestament, "Ezekiel", "Ezek.", 25),
-        BookData::new(Work::OldTestament, "Daniel", "Dan.", 26),
-        BookData::new(Work::OldTestament, "Hosea", "Hosea", 27),
-        BookData::new(Work::OldTestament, "Joel", "Joel", 28),
-        BookData::new(Work::OldTestament, "Amos", "Amos", 29),
-        BookData::new(Work::OldTestament, "Obadiah", "Obad.", 30),
-        BookData::new(Work::OldTestament, "Jonah", "Jonah", 31),
-        BookData::new(Work::OldTestament, "Micah", "Micah", 32),
-        BookData::new(Work::OldTestament, "Nahum", "Nahum", 33),
-        BookData::new(Work::OldTestament, "Habakkuk", "Hab.", 34),
-        BookData::new(Work::OldTestament, "Zephaniah", "Zeph.", 35),
-        BookData::new(Work::OldTestament, "Haggai", "Hag.", 36),
-        BookData::new(Work::OldTestament, "Zechariah", "Zech.", 37),
-        BookData::new(Work::OldTestament, "Malachi", "Mal.", 38),
+        BookData::new(Work::OldTestament, "Genesis", "Gen.", "gen", 0),
+        BookData::new(Work::OldTestament, "Exodus", "Ex.", "ex", 1),
+        BookData::new(Work::OldTestament, "Leviticus", "Lev.", "lev", 2),
+        BookData::new(Work::OldTestament, "Numbers", "Num.", "num", 3),
+        BookData::new(Work::OldTestament, "Deuteronomy", "Deut.", "deut", 4),
+        BookData::new(Work::OldTestament, "Joshua", "Josh.", "josh", 5),
+        BookData::new(Work::OldTestament, "Judges", "Judg.", "judg", 6),
+        BookData::new(Work::OldTestament, "Ruth", "Ruth", "ruth", 7),
+        BookData::new(Work::OldTestament, "1 Samuel", "1 Sam.", "1-sam", 8),
+        BookData::new(Work::OldTestament, "2 Samuel", "2 Sam.", "2-sam", 9),
+        BookData::new(Work::OldTestament, "1 Kings", "1 Kgs.", "1-kgs", 10),
+        BookData::new(Work::OldTestament, "2 Kings", "2 Kgs.", "2-kgs", 11),
+        BookData::new(Work::OldTestament, "1 Chronicles", "1 Chron.", "1-chron", 12,),
+        BookData::new(Work::OldTestament, "2 Chronicles", "2 Chron.", "2-chron", 13,),
+        BookData::new(Work::OldTestament, "Ezra", "Ezra", "ezra", 14),
+        BookData::new(Work::OldTestament, "Nehemiah", "Neh.", "neh", 15),
+        BookData::new(Work::OldTestament, "Esther", "Esth.", "esth", 16),
+        BookData::new(Work::OldTestament, "Job", "Job", "job", 17),
+        BookData::new(Work::OldTestament, "Psalms", "Ps.", "ps", 18),
+        BookData::new(Work::OldTestament, "Proverbs", "Prov.", "prov", 19),
+        BookData::new(Work::OldTestament, "Ecclesiastes", "Eccl.", "eccl", 20),
+        BookData::new(Work::OldTestament, "Song of Solomon", "Song.", "song", 21),
+        BookData::new(Work::OldTestament, "Isaiah", "Isa.", "isa", 22),
+        BookData::new(Work::OldTestament, "Jeremiah", "Jer.", "jer", 23),
+        BookData::new(Work::OldTestament, "Lamentations", "Lam.", "lam", 24),
+        BookData::new(Work::OldTestament, "Ezekiel", "Ezek.", "ezek", 25),
+        BookData::new(Work::OldTestament, "Daniel", "Dan.", "dan", 26),
+        BookData::new(Work::OldTestament, "Hosea", "Hosea", "hosea", 27),
+        BookData::new(Work::OldTestament, "Joel", "Joel", "joel", 28),
+        BookData::new(Work::OldTestament, "Amos", "Amos", "amos", 29),
+        BookData::new(Work::OldTestament, "Obadiah", "Obad.", "obad", 30),
+        BookData::new(Work::OldTestament, "Jonah", "Jonah", "jonah", 31),
+        BookData::new(Work::OldTestament, "Micah", "Micah", "micah", 32),
+        BookData::new(Work::OldTestament, "Nahum", "Nahum", "nahum", 33),
+        BookData::new(Work::OldTestament, "Habakkuk", "Hab.", "hab", 34),
+        BookData::new(Work::OldTestament, "Zephaniah", "Zeph.", "zeph", 35),
+        BookData::new(Work::OldTestament, "Haggai", "Hag.", "hag", 36),
+        BookData::new(Work::OldTestament, "Zechariah", "Zech.", "zech", 37),
+        BookData::new(Work::OldTestament, "Malachi", "Mal.", "mal", 38),
         // New Testament
-        BookData::new(Work::NewTestament, "Matthew", "Matt.", 0),
-        BookData::new(Work::NewTestament, "Mark", "Mark", 1),
-        BookData::new(Work::NewTestament, "Luke", "Luke", 2),
-        BookData::new(Work::NewTestament, "John", "John", 3),
-        BookData::new(Work::NewTestament, "Acts", "Acts", 4),
-        BookData::new(Work::NewTestament, "Romans", "Rom.", 5),
-        BookData::new(Work::NewTestament, "1 Corinthians", "1 Cor.", 6),
-        BookData::new(Work::NewTestament, "2 Corinthians", "2 Cor.", 7),
-        BookData::new(Work::NewTestament, "Galatians", "Gal.", 8),
-        BookData::new(Work::NewTestament, "Ephesians", "Eph.", 9),
-        BookData::new(Work::NewTestament, "Philippians", "Philip.", 10),
-        BookData::new(Work::NewTestament, "Colossians", "Col.", 11),
-        BookData::new(Work::NewTestament, "1 Thessalonians", "1 Thes.", 12),
-        BookData::new(Work::NewTestament, "2 Thessalonians", "2 Thes.", 13),
-        BookData::new(Work::NewTestament, "1 Timothy", "1 Tim.", 14),
-        BookData::new(Work::NewTestament, "2 Timothy", "2 Tim.", 15),
-        BookData::new(Work::NewTestament, "Titus", "Titus", 16),
-        BookData::new(Work::NewTestament, "Philemon", "Philem.", 17),
-        BookData::new(Work::NewTestament, "Hebrews", "Heb.", 18),
-        BookData::new(Work::NewTestament, "James", "James", 19),
-        BookData::new(Work::NewTestament, "1 Peter", "1 Pet.", 20),
-        BookData::new(Work::NewTestament, "2 Peter", "2 Pet.", 21),
-        BookData::new(Work::NewTestament, "1 John", "1 Jn.", 22),
-        BookData::new(Work::NewTestament, "2 John", "2 Jn.", 23),
-        BookData::new(Work::NewTestament, "3 John", "3 Jn.", 24),
-        BookData::new(Work::NewTestament, "Jude", "Jude", 25),
-        BookData::new(Work::NewTestament, "Revelation", "Rev.", 26),
+        BookData::new(Work::NewTestament, "Matthew", "Matt.", "matt", 0),
+        BookData::new(Work::NewTestament, "Mark", "Mark", "mark", 1),
+        BookData::new(Work::NewTestament, "Luke", "Luke", "luke", 2),
+        BookData::new(Work::NewTestament, "John", "John", "john", 3),
+        BookData::new(Work::NewTestament, "Acts", "Acts", "acts", 4),
+        BookData::new(Work::NewTestament, "Romans", "Rom.", "rom", 5),
+        BookData::new(Work::NewTestament, "1 Corinthians", "1 Cor.", "1-cor", 6),
+        BookData::new(Work::NewTestament, "2 Corinthians", "2 Cor.", "2-cor", 7),
+        BookData::new(Work::NewTestament, "Galatians", "Gal.", "gal", 8),
+        BookData::new(Work::NewTestament, "Ephesians", "Eph.", "eph", 9),
+        BookData::new(Work::NewTestament, "Philippians", "Philip.", "philip", 10),
+        BookData::new(Work::NewTestament, "Colossians", "Col.", "col", 11),
+        BookData::new(Work::NewTestament, "1 Thessalonians", "1 Thes.", "1-thes", 12,),
+        BookData::new(Work::NewTestament, "2 Thessalonians", "2 Thes.", "2-thes", 13,),
+        BookData::new(Work::NewTestament, "1 Timothy", "1 Tim.", "1-tim", 14),
+        BookData::new(Work::NewTestament, "2 Timothy", "2 Tim.", "2-tim", 15),
+        BookData::new(Work::NewTestament, "Titus", "Titus", "titus", 16),
+        BookData::new(Work::NewTestament, "Philemon", "Philem.", "philem", 17),
+        BookData::new(Work::NewTestament, "Hebrews", "Heb.", "heb", 18),
+        BookData::new(Work::NewTestament, "James", "James", "james", 19),
+        BookData::new(Work::NewTestament, "1 Peter", "1 Pet.", "1-pet", 20),
+        BookData::new(Work::NewTestament, "2 Peter", "2 Pet.", "2-pet", 21),
+        BookData::new(Work::NewTestament, "1 John", "1 Jn.", "1-jn", 22),
+        BookData::new(Work::NewTestament, "2 John", "2 Jn.", "2-jn", 23),
+        BookData::new(Work::NewTestament, "3 John", "3 Jn.", "3-jn", 24),
+        BookData::new(Work::NewTestament, "Jude", "Jude", "jude", 25),
+        BookData::new(Work::NewTestament, "Revelation", "Rev.", "rev", 26),
         // Book of Mormon
-        BookData::new(Work::BookOfMormon, "1 Nephi", "1 Ne.", 0),
-        BookData::new(Work::BookOfMormon, "2 Nephi", "2 Ne.", 1),
-        BookData::new(Work::BookOfMormon, "Jacob", "Jacob", 2),
-        BookData::new(Work::BookOfMormon, "Enos", "Enos", 3),
-        BookData::new(Work::BookOfMormon, "Jarom", "Jarom", 4),
-        BookData::new(Work::BookOfMormon, "Omni", "Omni", 5),
-        BookData::new(Work::BookOfMormon, "Words of Mormon", "W of M", 6),
-        BookData::new(Work::BookOfMormon, "Mosiah", "Mosiah", 7),
-        BookData::new(Work::BookOfMormon, "Alma", "Alma", 8),
-        BookData::new(Work::BookOfMormon, "Helaman", "Hel.", 9),
-        BookData::new(Work::BookOfMormon, "3 Nephi", "3 Ne.", 10),
-        BookData::new(Work::BookOfMormon, "4 Nephi", "4 Ne.", 11),
-        BookData::new(Work::BookOfMormon, "Mormon", "Morm.", 12),
-        BookData::new(Work::BookOfMormon, "Ether", "Ether", 13),
-        BookData::new(Work::BookOfMormon, "Moroni", "Moro.", 14),
+        BookData::new(Work::BookOfMormon, "1 Nephi", "1 Ne.", "1-ne", 0),
+        BookData::new(Work::BookOfMormon, "2 Nephi", "2 Ne.", "2-ne", 1),
+        BookData::new(Work::BookOfMormon, "Jacob", "Jacob", "jacob", 2),
+        BookData::new(Work::BookOfMormon, "Enos", "Enos", "enos", 3),
+        BookData::new(Work::BookOfMormon, "Jarom", "Jarom", "jarom", 4),
+        BookData::new(Work::BookOfMormon, "Omni", "Omni", "omni", 5),
+        BookData::new(Work::BookOfMormon, "Words of Mormon", "W of M", "w-of-m", 6),
+        BookData::new(Work::BookOfMormon, "Mosiah", "Mosiah", "mosiah", 7),
+        BookData::new(Work::BookOfMormon, "Alma", "Alma", "alma", 8),
+        BookData::new(Work::BookOfMormon, "Helaman", "Hel.", "hel", 9),
+        BookData::new(Work::BookOfMormon, "3 Nephi", "3 Ne.", "3-ne", 10),
+        BookData::new(Work::BookOfMormon, "4 Nephi", "4 Ne.", "4-ne", 11),
+        BookData::new(Work::BookOfMormon, "Mormon", "Morm.", "morm", 12),
+        BookData::new(Work::BookOfMormon, "Ether", "Ether", "ether", 13),
+        BookData::new(Work::BookOfMormon, "Moroni", "Moro.", "moro", 14),
     ]
 });
 
@@ -294,6 +359,7 @@ impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
                 if self.current_chap_index + start <= end {
                     let chapter = &book.chapters[self.current_chap_index + start - 1];
                     res = Some(VerseReference {
+                        work: Work::BookOfMormon,
                         book_index: self.range_reference.book_index,
                         chapter_index: self.current_chap_index + start,
                         verse_index: self.current_verse_index + 1,
@@ -316,6 +382,7 @@ impl<'a, 'b> Iterator for VerseRangeReferenceIter<'a, 'b> {
                 let mut res = None;
                 if self.current_verse_index + start <= end {
                     res = Some(VerseReference {
+                        work: Work::BookOfMormon,
                         book_index: self.range_reference.book_index,
                         chapter_index: chapter,
                         verse_index: start + self.current_verse_index,
@@ -362,6 +429,45 @@ impl RangeCollection {
     /// Validity of a reference in a given book can be checked with `is_valid`.
     pub fn new(s: &str) -> Result<Self, BOMError> {
         s.parse()
+    }
+
+    pub fn from_verse_ref(verseref: &VerseReference) -> Self {
+        Self {
+            refs: vec![VerseRangeReference {
+                range_type: RangeType::StartEndVerse {
+                    chapter: verseref.chapter_index,
+                    start: verseref.verse_index,
+                    end: verseref.verse_index,
+                },
+                book_index: verseref.book_index,
+                work: Work::BookOfMormon,
+            }],
+        }
+    }
+
+    pub fn url(&self) -> Option<String> {
+        let r = &self.refs[0];
+        let s = match r.range_type {
+            RangeType::StartEndVerse {
+                chapter,
+                start,
+                end,
+            } => {
+                let work = r.work.url_name();
+                let book = BOOK_DATA
+                    .iter()
+                    .find(|d| d.work == r.work && d.book_index == r.book_index)
+                    .expect("Failed to find book data for valid ref, should be impossible")
+                    .url_name;
+                format!(
+                    "https://www.churchofjesuschrist.org/study/scriptures/{}/{}/{}?lang=eng&id=p{}-p{}#p{}",
+                    work, book, chapter, start, end, start
+                )
+            }
+            _ => return None,
+        };
+
+        Some(s)
     }
 
     /// Returns whether this is a valid collection. Validity means that all chapters, books,
@@ -722,6 +828,7 @@ impl fmt::Display for RangeCollection {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use concat_idents::concat_idents;
 
     macro_rules! roundtrip_tests {
         ($($name:ident: $value:expr,)*) => {
@@ -883,4 +990,41 @@ mod tests {
         illegal_13: "Ephraim 5",
         illegal_14: "Alma 5:5-6-",
     }
+
+    macro_rules! bom_urls_reachable {
+        ($($test_name_postfix:ident:$book_index:expr,)*) => {
+        $(
+            concat_idents!(fn_name = test_urls_reachable, _, $test_name_postfix {
+                #[test]
+                fn fn_name() {
+                    let bom = BOM::from_default_parser().unwrap();
+                    let work = Work::BookOfMormon;
+                    let book_index = $book_index;
+                    let mut chapter_index = 1;
+                    let mut verse_index = 1;
+                    let mut verse_ref = VerseReference::new(work, book_index, chapter_index, verse_index);
+                    let mut is_valid = verse_ref.is_valid(&bom);
+
+                    while is_valid {
+                        let url = verse_ref.url().unwrap();
+                        let resp = ureq::get(&url.to_string()).redirects(0).call();
+                        assert!(resp.ok(), "url failed: {}", url);
+
+                        verse_index += 15; // Speed up.
+                        verse_ref = VerseReference::new(work, book_index, chapter_index, verse_index);
+                        is_valid = verse_ref.is_valid(&bom);
+                        if !is_valid && chapter_index < 40 { // For speed
+                            verse_index = 1;
+                            chapter_index += 1;
+                            verse_ref = VerseReference::new(work, book_index, chapter_index, verse_index);
+                            is_valid = verse_ref.is_valid(&bom);
+                        }
+                    }
+                }
+            });
+        )*
+        }
+    }
+
+    bom_urls_reachable! {nephi1:0, nephi2:1, jacob:2, enos:3, jarom:4, omni:5, wofm:6, mosiah:7, alma:8, helaman:9, nephi3:10, nephi4:11, mormon:12, ether:13, moroni:14,}
 }

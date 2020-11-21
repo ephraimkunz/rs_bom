@@ -1,4 +1,5 @@
-use crate::{VerseReference, VerseWithReference, BOM};
+use crate::reference::{VerseReference, Work};
+use crate::{VerseWithReference, BOM};
 use std::iter;
 
 impl BOM {
@@ -6,7 +7,12 @@ impl BOM {
     pub fn verses(&self) -> impl Iterator<Item = VerseWithReference> {
         VerseIter {
             bom: self,
-            position: VerseReference::default(),
+            position: VerseReference {
+                work: Work::BookOfMormon,
+                book_index: 0,
+                chapter_index: 1,
+                verse_index: 1,
+            },
         }
     }
 }
@@ -97,6 +103,7 @@ mod tests {
             VerseWithReference {
                 book_title: "Testing".to_string(),
                 reference: VerseReference {
+                    work: Work::BookOfMormon,
                     book_index: 0,
                     chapter_index: 1,
                     verse_index: 1,

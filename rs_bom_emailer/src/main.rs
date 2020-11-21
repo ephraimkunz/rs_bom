@@ -1,4 +1,5 @@
-use chrono::Utc;
+use chrono::Local;
+use lettre::message::header;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use rand::Rng;
@@ -10,13 +11,18 @@ fn main() {
     let mut rng = rand::thread_rng();
     let r = rng.gen_range(0, bom.verses().count());
     let random_verse = bom.verses().nth(r).unwrap();
-    let now = Utc::now();
+    let now = Local::now();
 
     let email = Message::builder()
         .from("Ephraim Kunz <ephraimkunz@gmail.com>".parse().unwrap())
         .to("Ephraim Kunz <ephraimkunz@icloud.com>".parse().unwrap())
         .subject(format!("Random verse for {}", now.format("%A, %B %e")))
-        .body(random_verse.to_string())
+        .header(header::ContentType(
+            "text/html; charset=utf8"
+                .parse()
+                .expect("Unable to parse html header"),
+        ))
+        .body(random_verse.to_html_string())
         .unwrap();
 
     // Define these at compile time so they'll be inserted into the binary.

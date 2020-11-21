@@ -7,7 +7,7 @@ mod parsers;
 mod reference;
 
 pub use self::parsers::gutenberg;
-pub use self::reference::RangeCollection;
+pub use self::reference::{RangeCollection, VerseReference, Work};
 
 /// Plugin interface for creating a new Book of Mormon parser. Primarily designed
 /// to make it easier to add new languages later.
@@ -88,6 +88,19 @@ pub struct VerseWithReference<'v> {
     pub text: &'v str,
 }
 
+impl<'v> VerseWithReference<'v> {
+    pub fn to_html_string(&self) -> String {
+        format!(
+            "<h3><a href=\"{}\">{} {}:{}</a></h3> <p>{}</p>",
+            self.reference.url().unwrap_or_default(),
+            self.book_title,
+            self.reference.chapter_index,
+            self.reference.verse_index,
+            self.text
+        )
+    }
+}
+
 impl<'v> fmt::Display for VerseWithReference<'v> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
@@ -109,52 +122,6 @@ pub enum BOMError {
 
     #[error("Reference error: {0}")]
     ReferenceError(String),
-}
-
-/// Everything needed to uniquely identify a single verse in the `BOM`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct VerseReference {
-    book_index: usize,    // 0-based
-    chapter_index: usize, // 1-based
-    verse_index: usize,   // 1-based, None == whole chapter
-}
-
-impl VerseReference {
-    /// Create a verse reference from parts.
-    /// # Arguments
-    /// * `book_index`: 0 indexed, 0 = 1 Nephi, etc.
-    /// * `chapter_index`: 1-indexed
-    /// * `verse_index`: 1-indexed
-    #[must_use]
-    pub const fn new(book_index: usize, chapter_index: usize, verse_index: usize) -> Self {
-        Self {
-            book_index,
-            chapter_index,
-            verse_index,
-        }
-    }
-
-    fn is_valid(&self, bom: &BOM) -> bool {
-        if self.chapter_index == 0 || self.verse_index == 0 {
-            return false;
-        }
-
-        bom.books
-            .get(self.book_index)
-            .and_then(|b| b.chapters.get(self.chapter_index - 1))
-            .and_then(|c| c.verses.get(self.verse_index - 1))
-            .is_some()
-    }
-}
-
-impl Default for VerseReference {
-    fn default() -> Self {
-        Self {
-            book_index: 0,
-            chapter_index: 1,
-            verse_index: 1,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -190,6 +157,7 @@ mod tests {
     fn verse_matching_bad_reference() {
         let bom = BOM::from_default_parser().unwrap();
         let reference = VerseReference {
+            work: Work::BookOfMormon,
             book_index: 1,
             chapter_index: 0,
             verse_index: 0,
@@ -202,6 +170,7 @@ mod tests {
     fn verse_matching_good_reference() {
         let bom = BOM::from_default_parser().unwrap();
         let reference = VerseReference {
+            work: Work::BookOfMormon,
             book_index: 0,
             chapter_index: 2,
             verse_index: 15,
@@ -227,7 +196,7 @@ mod tests {
     #[test]
     fn display_verse() {
         let bom = BOM::from_default_parser().unwrap();
-        let reference = VerseReference::new(0, 1, 1);
+        let reference = VerseReference::new(Work::BookOfMormon, 0, 1, 1);
         let verse = bom.verse_matching(&reference).unwrap();
         assert_eq!(
             verse.to_string(),
@@ -255,6 +224,7 @@ mod tests {
                 VerseWithReference {
                     book_title: "1 Nephi".to_string(),
                     reference: VerseReference {
+                        work: Work::BookOfMormon,
                         book_index: 0,
                         chapter_index: 3,
                         verse_index: 3,
@@ -266,6 +236,7 @@ mod tests {
                 VerseWithReference {
                     book_title: "1 Nephi".to_string(),
                     reference: VerseReference {
+                        work: Work::BookOfMormon,
                         book_index: 0,
                         chapter_index: 3,
                         verse_index: 4,
@@ -277,6 +248,7 @@ mod tests {
                 VerseWithReference {
                     book_title: "1 Nephi".to_string(),
                     reference: VerseReference {
+                        work: Work::BookOfMormon,
                         book_index: 0,
                         chapter_index: 3,
                         verse_index: 5,
@@ -303,6 +275,7 @@ mod tests {
             &VerseWithReference {
                 book_title: "1 Nephi".to_string(),
                 reference: VerseReference {
+                    work: Work::BookOfMormon,
                     book_index: 0,
                     chapter_index: 3,
                     verse_index: 1,
