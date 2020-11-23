@@ -103,9 +103,9 @@ impl BookData {
     }
 }
 
+#[rustfmt::skip]
 static BOOK_DATA: Lazy<Vec<BookData>> = Lazy::new(|| {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    vec![
+        vec![
         // Old Testament
         BookData::new(Work::OldTestament, "Genesis", "Gen.", "gen", 0),
         BookData::new(Work::OldTestament, "Exodus", "Ex.", "ex", 1),
@@ -996,6 +996,7 @@ mod tests {
         $(
             concat_idents!(fn_name = test_urls_reachable, _, $test_name_postfix {
                 #[test]
+                #[ignore] // These tests take a long time to run.
                 fn fn_name() {
                     let bom = BOM::from_default_parser().unwrap();
                     let work = Work::BookOfMormon;
