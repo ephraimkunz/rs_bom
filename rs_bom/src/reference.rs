@@ -719,9 +719,10 @@ fn extract_range(s: &str) -> Result<(usize, usize), BOMError> {
 }
 
 fn book_data_from_candidate_title(candidate: &str) -> Option<&BookData> {
-    BOOK_DATA
-        .iter()
-        .find(|d| d.long_name == candidate || d.short_name == candidate)
+    BOOK_DATA.iter().find(|d| {
+        d.long_name.to_lowercase() == candidate.to_lowercase()
+            || d.short_name.to_lowercase() == candidate.to_lowercase()
+    })
 }
 
 fn extract_book_name(s: &str) -> Result<(usize, usize, Work), BOMError> {
@@ -919,6 +920,8 @@ mod tests {
             ("Words of Mormon 1:1", "W of M 1:1"),
             ("2 Nephi 1:1", "2 Ne. 1:1"),
             ("1 Nephi 1:1", "1 Ne. 1:1"),
+            // Capitalization
+            ("alma 1:1", "Alma 1:1"),
         ];
 
         for (input, expected) in cases {
