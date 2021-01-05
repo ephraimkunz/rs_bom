@@ -9,7 +9,7 @@ fn main() {
     let bom = BOM::from_default_parser().expect("Failed to get BOM");
 
     let mut rng = rand::thread_rng();
-    let r = rng.gen_range(0, bom.verses().count());
+    let r = rng.gen_range(0..bom.verses().count());
     let random_verse = bom.verses().nth(r).unwrap();
     let now = Local::now();
 

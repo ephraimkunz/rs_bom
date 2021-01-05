@@ -1000,7 +1000,7 @@ mod tests {
             concat_idents!(fn_name = test_urls_reachable, _, $test_name_postfix {
                 #[test]
                 #[ignore] // These tests take a long time to run.
-                fn fn_name() {
+                fn fn_name() -> Result<(), ureq::Error> {
                     let bom = BOM::from_default_parser().unwrap();
                     let work = Work::BookOfMormon;
                     let book_index = $book_index;
@@ -1011,8 +1011,12 @@ mod tests {
 
                     while is_valid {
                         let url = verse_ref.url().unwrap();
-                        let resp = ureq::get(&url.to_string()).redirects(0).call();
-                        assert!(resp.ok(), "url failed: {}", url);
+                        let resp = ureq::builder()
+                            .redirects(0)
+                            .build()
+                            .get(&url.to_string())
+                            .call()?;
+                        assert_eq!(resp.status(), 200, "url failed: {}", url);
 
                         verse_index += 15; // Speed up.
                         verse_ref = VerseReference::new(work, book_index, chapter_index, verse_index);
@@ -1024,6 +1028,7 @@ mod tests {
                             is_valid = verse_ref.is_valid(&bom);
                         }
                     }
+                    Ok(())
                 }
             });
         )*
