@@ -1510,7 +1510,7 @@ name = "rs_bom_api"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
- "rand 0.7.3",
+ "rand 0.8.1",
  "rocket",
  "rocket_contrib",
  "rs_bom",
@@ -1524,7 +1524,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "clap",
- "rand 0.7.3",
+ "rand 0.8.1",
  "regex",
  "rs_bom",
 ]
