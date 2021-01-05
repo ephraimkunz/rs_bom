@@ -16,7 +16,7 @@ edition = "2018"
 rs_bom = { path = "../rs_bom" }
 rocket = { version = "0.5.0-dev", default-features = false, git = "https://github.com/SergioBenitez/Rocket", branch = "master" }
 serde = {version = "1.0", features = ["derive"]}
-rand = "0.7"
+rand = "0.8"
 lazy_static = "1.4"
 
 [dependencies.rocket_contrib]

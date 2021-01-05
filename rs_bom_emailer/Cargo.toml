@@ -9,5 +9,5 @@ edition = "2018"
 [dependencies]
 lettre = "0.10.0-alpha.4"
 rs_bom = { path = "../rs_bom" }
-rand = "0.7"
+rand = "0.8"
 chrono = "0.4"
