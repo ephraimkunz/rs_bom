@@ -47,7 +47,7 @@ fn main() -> Result<()> {
         }
         ("random", _) => {
             let mut rng = rand::thread_rng();
-            let r = rng.gen_range(0, bom.verses().count());
+            let r = rng.gen_range(0..bom.verses().count());
             let random_verse = bom.verses().nth(r).unwrap();
             println!("{}", random_verse);
         }

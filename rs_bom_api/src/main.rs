@@ -72,7 +72,7 @@ fn verses(
 fn random_verse() -> Json<WebVerseWithReference> {
     let verses = STATIC_BOM.verses();
     let mut rng = rand::thread_rng();
-    let r = rng.gen_range(0, verses.count());
+    let r = rng.gen_range(0..verses.count());
     let random_verse = STATIC_BOM.verses().nth(r).unwrap();
     Json(random_verse.into())
 }
