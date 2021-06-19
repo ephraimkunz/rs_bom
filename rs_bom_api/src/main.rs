@@ -4,9 +4,9 @@ extern crate rocket;
 use lazy_static::lazy_static;
 use rand::Rng;
 use rocket::response::status;
-use rocket_contrib::json::Json;
+use rocket::serde::{json::Json, Serialize};
+
 use rs_bom::{RangeCollection, VerseReference, VerseWithReference, Work, BOM};
-use serde::Serialize;
 
 lazy_static! {
     static ref STATIC_BOM: BOM =
@@ -98,11 +98,11 @@ fn not_found() -> String {
 }
 
 #[launch]
-fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+fn rocket() -> _ {
+    rocket::build()
         .mount(
             "/",
             routes![single_verse, verses, random_verse, canonicalize],
         )
-        .register(catchers![not_found])
+        .register("/", catchers![not_found])
 }

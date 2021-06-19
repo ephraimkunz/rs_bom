@@ -17,11 +17,7 @@ fn main() {
         .from("Ephraim Kunz <ephraimkunz@gmail.com>".parse().unwrap())
         .to("Ephraim Kunz <ephraimkunz@icloud.com>".parse().unwrap())
         .subject(format!("Random verse for {}", now.format("%A, %B %e")))
-        .header(header::ContentType(
-            "text/html; charset=utf8"
-                .parse()
-                .expect("Unable to parse html header"),
-        ))
+        .header(header::ContentType::TEXT_HTML)
         .body(random_verse.to_html_string())
         .unwrap();
 

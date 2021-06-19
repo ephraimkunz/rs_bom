@@ -845,10 +845,7 @@ mod tests {
                         "Roundtrip from string -> parsed -> string failed"
                     );
                 } else {
-                    assert!(
-                        false,
-                        format!("Input '{}' should have parsed without error", input)
-                    );
+                    panic!("Input '{}' should have parsed without error", input)
                 }
             }
         )*
@@ -931,10 +928,7 @@ mod tests {
                 let formatted = parsed.to_string();
                 assert_eq!(formatted, expected, "Canonicalization failed");
             } else {
-                assert!(
-                    false,
-                    format!("Input {} should have parsed without error", input)
-                );
+                panic!("Input {} should have parsed without error", input)
             }
         }
     }
@@ -964,11 +958,11 @@ mod tests {
                 match result {
                     Ok(parsed) => assert!(
                         !parsed.is_valid(&bom),
-                        format!("Should have failed to validate reference {}", case)
-                    ),
+                        "Should have failed to validate reference {}", case)
+                    ,
                     _ => assert!(
                         result.is_err(),
-                        format!("Should have failed to parse reference {}", case)
+                        "Should have failed to parse reference {}", case
                     )
                 };
             }
