@@ -59,7 +59,7 @@ fn verses(
     reference_string: String,
 ) -> Result<Json<Vec<WebVerseWithReference>>, status::NotFound<String>> {
     let reference = RangeCollection::new(&reference_string)
-        .map_err(|e| status::NotFound(format!("Error: {:}", e.to_string())))?;
+        .map_err(|e| status::NotFound(format!("Error: {}", e)))?;
 
     let verses: Vec<_> = STATIC_BOM
         .verses_matching(&reference)
@@ -82,7 +82,7 @@ fn canonicalize(
     reference_string: String,
 ) -> Result<Json<WebParsedReference>, status::NotFound<String>> {
     let mut collection = RangeCollection::new(&reference_string)
-        .map_err(|e| status::NotFound(format!("Error: {:}", e.to_string())))?;
+        .map_err(|e| status::NotFound(format!("Error: {}", e)))?;
     collection.canonicalize();
 
     Ok(Json(WebParsedReference {
