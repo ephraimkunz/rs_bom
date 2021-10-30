@@ -8,7 +8,7 @@ readme = "README.md"
 keywords = ["scripture", "BOM", "Book of Mormon", "LDS", "mormon", "Church of Jesus Christ"]
 categories = ["text-processing"]
 license = "MIT"
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "rs_bom"

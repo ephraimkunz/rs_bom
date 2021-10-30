@@ -3,7 +3,7 @@ name = "rs_bom_cli"
 version = "0.1.0"
 authors = ["Ephraim Kunz <ephraimkunz@me.com>"]
 description = "Command-line tool for interacting with Book of Mormon text."
-edition = "2018"
+edition = "2021"
 categories = ["command-line-utilities"]
 
 [dependencies]
