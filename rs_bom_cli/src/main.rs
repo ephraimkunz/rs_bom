@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{value_t, App, AppSettings, Arg, SubCommand};
+use clap::{App, AppSettings, Arg};
 use rand::Rng;
 use regex::Regex;
 use rs_bom::{RangeCollection, BOM};
@@ -11,47 +11,47 @@ fn main() -> Result<()> {
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .setting(AppSettings::SubcommandRequired)
-        .arg(Arg::with_name("delete_cache").short("d").long("delete_cache").help("Delete any cache files before running"))
+        .arg(Arg::new("delete_cache").short('d').long("delete_cache").help("Delete any cache files before running"))
         .subcommand(
-            SubCommand::with_name("search")
+            App::new("search")
                 .about("Search by reference ('1 Nephi 5:3-6') or with a free-form string ('dwelt in a')")
                 .arg(
-                    Arg::with_name("query")
+                    Arg::new("query")
                         .help("The search query")
                         .required(true),
                 )
                 .arg(
-                    Arg::with_name("num_matches")
-                        .short("n")
+                    Arg::new("num_matches")
+                        .short('n')
                         .long("num_matches")
                         .help("The maximum number of search results to return")
                         .default_value("10"),
                 )
                 .arg(
-                    Arg::with_name("count_matches")
-                        .short("c")
+                    Arg::new("count_matches")
+                        .short('c')
                         .long("count_matches")
                         .help("First line of returned data is the total number of verses matching the query")
                 ),
         )
-        .subcommand(SubCommand::with_name("random").about("Output a random verse"))
-        .subcommand(SubCommand::with_name("text").about("Output the entire Book of Mormon text"))
+        .subcommand(App::new("random").about("Output a random verse"))
+        .subcommand(App::new("text").about("Output the entire Book of Mormon text"))
         .get_matches();
 
     let bom = get_bom(matches.is_present("delete_cache"))?;
 
     match matches.subcommand() {
-        ("text", _) => {
+        Some(("text", _)) => {
             let all_verses: Vec<_> = bom.verses().map(|v| v.text).collect();
             println!("{}", all_verses.join("\n"));
         }
-        ("random", _) => {
+        Some(("random", _)) => {
             let mut rng = rand::thread_rng();
             let r = rng.gen_range(0..bom.verses().count());
             let random_verse = bom.verses().nth(r).unwrap();
             println!("{}", random_verse);
         }
-        ("search", Some(submatches)) => {
+        Some(("search", submatches)) => {
             let search = submatches.value_of("query").unwrap();
             let matches: Vec<String>;
             let total_match_count: usize;
@@ -63,7 +63,8 @@ fn main() -> Result<()> {
                 total_match_count = matches.len();
             } else {
                 // If that failed, try to parse as free form text.
-                let num_matches = value_t!(submatches.value_of("num_matches"), usize)
+                let num_matches = submatches
+                    .value_of_t("num_matches")
                     .unwrap_or_else(|e| e.exit());
                 let re = Regex::new(&format!(r"(?i){}", search)).unwrap();
 

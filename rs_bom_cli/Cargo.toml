@@ -11,5 +11,5 @@ regex = "1"
 anyhow = "1.0"
 rand = "0.8"
 rs_bom = { path = "../rs_bom" }
-clap = "2.33"
+clap = "3"
 bincode = "1.3"
