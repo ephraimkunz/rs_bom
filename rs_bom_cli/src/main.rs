@@ -1,19 +1,19 @@
 use anyhow::Result;
-use clap::{App, AppSettings, Arg};
+use clap::{Arg, Command};
 use rand::Rng;
 use regex::Regex;
 use rs_bom::{RangeCollection, BOM};
 use std::{env, fs};
 
 fn main() -> Result<()> {
-    let matches = App::new(env!("CARGO_PKG_NAME"))
+    let matches = Command::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
-        .setting(AppSettings::SubcommandRequired)
+        .subcommand_required(true)
         .arg(Arg::new("delete_cache").short('d').long("delete_cache").help("Delete any cache files before running"))
         .subcommand(
-            App::new("search")
+            Command::new("search")
                 .about("Search by reference ('1 Nephi 5:3-6') or with a free-form string ('dwelt in a')")
                 .arg(
                     Arg::new("query")
@@ -34,8 +34,8 @@ fn main() -> Result<()> {
                         .help("First line of returned data is the total number of verses matching the query")
                 ),
         )
-        .subcommand(App::new("random").about("Output a random verse"))
-        .subcommand(App::new("text").about("Output the entire Book of Mormon text"))
+        .subcommand(Command::new("random").about("Output a random verse"))
+        .subcommand(Command::new("text").about("Output the entire Book of Mormon text"))
         .get_matches();
 
     let bom = get_bom(matches.is_present("delete_cache"))?;
