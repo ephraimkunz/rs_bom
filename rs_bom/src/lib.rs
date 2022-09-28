@@ -79,7 +79,7 @@ impl BOM {
 }
 
 /// Represents the text of a verse and it's reference.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct VerseWithReference<'v> {
     book_title: String, // Needed to display this without having to hold a reference to BOM.
     /// Reference of this verse.
