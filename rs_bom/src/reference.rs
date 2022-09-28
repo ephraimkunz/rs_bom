@@ -29,7 +29,7 @@ impl Work {
 }
 
 /// Everything needed to uniquely identify a single verse in a work of scripture.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct VerseReference {
     pub(super) work: Work,
     pub(super) book_index: usize,    // 0-based
