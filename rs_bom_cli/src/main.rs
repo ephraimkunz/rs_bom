@@ -1,72 +1,73 @@
 use anyhow::Result;
-use clap::{Arg, Command};
+use clap::{Parser, Subcommand};
 use rand::Rng;
 use regex::Regex;
 use rs_bom::{RangeCollection, BOM};
 use std::{env, fs};
 
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Delete any cache files before running
+    #[arg(short, long)]
+    delete_cache: bool,
+
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Search by reference ('1 Nephi 5:3-6') or with a free-form string ('dwelt in a')
+    Search {
+        /// The search query
+        query: String,
+
+        /// The maximum number of search results to return
+        #[arg(short, long, default_value_t = 10)]
+        num_matches: usize,
+
+        /// First line of the returned data is the total number of verses matching the query
+        #[arg(short, long)]
+        count_matches: bool,
+    },
+    /// Output a random verse
+    Random,
+    /// Output the entire Book of Mormon text
+    Text,
+}
+
 fn main() -> Result<()> {
-    let matches = Command::new(env!("CARGO_PKG_NAME"))
-        .version(env!("CARGO_PKG_VERSION"))
-        .author(env!("CARGO_PKG_AUTHORS"))
-        .about(env!("CARGO_PKG_DESCRIPTION"))
-        .subcommand_required(true)
-        .arg(Arg::new("delete_cache").short('d').long("delete_cache").help("Delete any cache files before running"))
-        .subcommand(
-            Command::new("search")
-                .about("Search by reference ('1 Nephi 5:3-6') or with a free-form string ('dwelt in a')")
-                .arg(
-                    Arg::new("query")
-                        .help("The search query")
-                        .required(true),
-                )
-                .arg(
-                    Arg::new("num_matches")
-                        .short('n')
-                        .long("num_matches")
-                        .help("The maximum number of search results to return")
-                        .default_value("10"),
-                )
-                .arg(
-                    Arg::new("count_matches")
-                        .short('c')
-                        .long("count_matches")
-                        .help("First line of returned data is the total number of verses matching the query")
-                ),
-        )
-        .subcommand(Command::new("random").about("Output a random verse"))
-        .subcommand(Command::new("text").about("Output the entire Book of Mormon text"))
-        .get_matches();
+    let cli = Cli::parse();
+    let bom = get_bom(cli.delete_cache)?;
 
-    let bom = get_bom(matches.is_present("delete_cache"))?;
-
-    match matches.subcommand() {
-        Some(("text", _)) => {
+    match cli.command {
+        Commands::Text => {
             let all_verses: Vec<_> = bom.verses().map(|v| v.text).collect();
             println!("{}", all_verses.join("\n"));
         }
-        Some(("random", _)) => {
+        Commands::Random => {
             let mut rng = rand::thread_rng();
             let r = rng.gen_range(0..bom.verses().count());
             let random_verse = bom.verses().nth(r).unwrap();
             println!("{}", random_verse);
         }
-        Some(("search", submatches)) => {
-            let search = submatches.value_of("query").unwrap();
+        Commands::Search {
+            query,
+            num_matches,
+            count_matches,
+        } => {
             let matches: Vec<String>;
             let total_match_count: usize;
 
             // Try to parse as a reference first.
-            let range = RangeCollection::new(search);
+            let range = RangeCollection::new(&query);
             if let Ok(range) = range {
                 matches = bom.verses_matching(&range).map(|v| v.to_string()).collect();
                 total_match_count = matches.len();
             } else {
                 // If that failed, try to parse as free form text.
-                let num_matches = submatches
-                    .value_of_t("num_matches")
-                    .unwrap_or_else(|e| e.exit());
-                let re = Regex::new(&format!(r"(?i){}", search)).unwrap();
+                let re = Regex::new(&format!(r"(?i){}", query)).unwrap();
 
                 total_match_count = bom.verses().filter(|v| re.is_match(v.text)).count();
 
@@ -78,7 +79,7 @@ fn main() -> Result<()> {
                     .collect();
             }
 
-            if submatches.is_present("count_matches") {
+            if count_matches {
                 println!("{}", total_match_count);
             }
 
@@ -86,7 +87,6 @@ fn main() -> Result<()> {
                 println!("{}", matches.join("\n\n"));
             }
         }
-        _ => unreachable!(),
     }
     Ok(())
 }
