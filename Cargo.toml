@@ -7,6 +7,8 @@ members = [
     "rs_bom_emailer",
 ]
 
+resolver = "2"
+
 [profile.release]
 # Enable link-time optimization, eliminates more code and inlines across crate boundaries.
 lto = true
